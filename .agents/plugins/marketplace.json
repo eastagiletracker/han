@@ -1,0 +1,164 @@
+{
+  "name": "han",
+  "interface": {
+    "displayName": "Han"
+  },
+  "plugins": [
+    {
+      "name": "han-communication",
+      "source": {
+        "source": "local",
+        "path": "./han-communication"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "han-core",
+      "source": {
+        "source": "local",
+        "path": "./han-core"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "han-documentation",
+      "source": {
+        "source": "local",
+        "path": "./han-documentation"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "han-research",
+      "source": {
+        "source": "local",
+        "path": "./han-research"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "han-planning",
+      "source": {
+        "source": "local",
+        "path": "./han-planning"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "han-coding",
+      "source": {
+        "source": "local",
+        "path": "./han-coding"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "han-github",
+      "source": {
+        "source": "local",
+        "path": "./han-github"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "han-reporting",
+      "source": {
+        "source": "local",
+        "path": "./han-reporting"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "han-feedback",
+      "source": {
+        "source": "local",
+        "path": "./han-feedback"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "han-atlassian",
+      "source": {
+        "source": "local",
+        "path": "./han-atlassian"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "han-linear",
+      "source": {
+        "source": "local",
+        "path": "./han-linear"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "han-ddd",
+      "source": {
+        "source": "local",
+        "path": "./han-ddd"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "han-plugin-builder",
+      "source": {
+        "source": "local",
+        "path": "./han-plugin-builder"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}
