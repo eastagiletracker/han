@@ -6,21 +6,24 @@ Code review today picks its depth from the size of the change, and the operator 
 review type instead. Typing `/han-coding:code-review work-ticket docs/tickets/my-ticket.md` should check whether the
 branch resolves that ticket, and typing `testing` or `architecture` should run only the specialists for that concern.
 The goal, in the operator's words: "so reviews can be parallelized, focused, and valuable by keeping concerns better
-separated."
+separated." Teams using Han must also be able to add review types of their own, such as a `pii-check` or a
+`hipaa-compliance` review, and attach their own agents to any type, through `.han/config.md`.
 
 This is a deliberate improvement to a design the operator already sketched, not a fix for a reported defect. The source
-is the operator's own request, recorded word for word in `artifacts/scope-boundary.md`.
+is the operator's own request and the answers given during planning, recorded word for word in
+`artifacts/scope-boundary.md` and the decision log.
 
 ## What Changes, In One Paragraph
 
 After this change, code review is answerable for running one named concern well, instead of for scaling one broad
 review to the size of the diff. Each review type is a small data file that names its specialists, its share of the
-manual checklist, any extra instructions, any input it requires, and any report section it adds. The skill keeps every
-step that applies to all reviews: finding the change, automated checks, the manual pass, the YAGNI pass, the
-independent validation pass, report writing, and the readability rewrite. With no type named, the review runs a default
-set of five types together, which reproduces today's review. One severity rule replaces the three size bands, each run
-writes into its own folder so two typed reviews of one branch can run side by side, and the PR-posting skill passes the
-type through.
+manual checklist, its severity rule, any extra instructions, and any report section it adds. Han ships six types, and a
+team can declare more in `.han/config.md` with files of the same shape. The skill keeps every step that applies to all
+reviews: finding the change, automated checks, the manual pass, the YAGNI pass, the independent validation pass, report
+writing, and the readability rewrite. With no type named, the review runs a default set of five types together, which
+reproduces today's review. One default severity rule replaces the three size bands, each run writes into its own folder
+so two typed reviews of one branch can run side by side, every agent returns its findings for the skill to file, and
+the PR-posting skill passes the type through.
 
 ## Current State
 
@@ -37,6 +40,9 @@ Size is read at more than a dozen sites across `SKILL.md` and four reference fil
 Everything the skill knows about a specialist is spread over nine tables keyed by agent name, which agree only by
 convention. One of them is already stale: `output-verification.md` lists 8 of the 11 agents
 ([C-11](artifacts/current-state-findings.md#c-11-per-agent-data-is-spread-across-nine-parallel-tables-keyed-by-agent-name)).
+Three specialists are told to write a file but have no tool to write one, and an agent added through `## Extra Agents`
+is dispatched but its output is never read
+([C-23](artifacts/current-state-findings.md#c-23-extra-agents-and-specialists-without-a-write-tool-have-nowhere-reliable-to-put-their-findings)).
 
 Three properties block the operator's goal directly:
 
@@ -48,29 +54,35 @@ Three properties block the operator's goal directly:
   ([C-13](artifacts/current-state-findings.md#c-13-agent-output-files-have-fixed-names-so-parallel-reviews-collide-and-stale-files-can-be-read),
   [C-14](artifacts/current-state-findings.md#c-14-the-report-name-is-per-branch-and-a-second-run-replaces-the-first)).
 - **There is no way to verify a ticket.** The only work-document intake summarizes to 200 words, fails open, and is
-  skipped without git; the skill cannot fetch a URL other than through `gh`
+  skipped without git
   ([C-8](artifacts/current-state-findings.md#c-8-step-15-is-the-only-work-document-intake-today-and-it-does-not-fit-a-ticket-to-verify-against),
   [C-10](artifacts/current-state-findings.md#c-10-code-review-cannot-fetch-a-ticket-url-today)). The existing
   `han-core:gap-analyzer` agent already compares an implementation against a requirements document
   ([C-20](artifacts/current-state-findings.md#c-20-han-coregap-analyzer-already-does-spec-vs-implementation-comparison-and-can-fetch-urls)).
 
+The config file has one canonical rule with twelve byte-identical copies, and that rule says a bad config never fails a
+run, with one exception today
+([C-24](artifacts/current-state-findings.md#c-24-the-config-rule-is-one-canonical-file-with-twelve-byte-identical-copies-and-a-bad-config-never-fails-a-run)).
+
 ## Target State
 
 The skill splits into two kinds of thing that change for different reasons. **A review type** says which concerns a
-review covers. **A roster entry** says how to brief one specialist and where to read its output. Types name roster
+review covers. **A roster entry** says how to brief one specialist and where its output is filed. Types name roster
 entries; they never restate them
 ([D-1](artifacts/change-decision-log.md#d-1-type-files-name-agents-everything-about-briefing-an-agent-stays-shared-and-keyed-by-agent)).
 
 ### What `SKILL.md` owns
 
-`SKILL.md` keeps the shared flow and gains a `## Review Types` section, the only list of type tokens and the only link
-to each type file
-([D-2](artifacts/change-decision-log.md#d-2-skillmd-holds-the-only-list-of-review-types-type-files-carry-no-links)).
+`SKILL.md` keeps the shared flow and gains a `## Review Types` section, the only list of shipped type tokens and the
+only link to each shipped type file
+([D-2](artifacts/change-decision-log.md#d-2-skillmd-lists-the-shipped-review-types-type-files-carry-no-links)).
 That section also pins the default set
-([D-6](artifacts/change-decision-log.md#d-6-no-type-means-one-run-of-the-default-set-with-todays-roster-rule)):
+([D-6](artifacts/change-decision-log.md#d-6-no-type-means-one-run-of-the-default-set-with-todays-roster-rule)) and
+says that `.han/config.md` may declare more types
+([D-20](artifacts/change-decision-log.md#d-20-hanconfigmd-can-declare-review-types-that-han-does-not-ship)):
 
 ```
-| Token             | File                                                              | Purpose                                                   |
+| Token             | File                                                                          | Purpose                                                   |
 | `security`        | [references/types/security.md](./references/types/security.md)               | Whether the change opens an exploitable path              |
 | `testing`         | [references/types/testing.md](./references/types/testing.md)                 | Test coverage and edge cases of the change                |
 | `architecture`    | [references/types/architecture.md](./references/types/architecture.md)       | Module structure, dependency direction, runtime flow      |
@@ -81,34 +93,41 @@ That section also pins the default set
 Default (no type token): security, testing, architecture, observability, maintainability
 Default always-run agents: han-core:junior-developer, han-core:adversarial-security-analyst
 Every other agent in the default set's rosters: dispatched only when its roster signal fires
+Also on the default run: agents .han/config.md attaches to a default-set type; ## Extra Agents under the signal rule
+More types: declared under ## Code Review Types in .han/config.md; never part of the default run
 ```
 
 The flow it keeps, with what moves:
 
-1. **Step 1** finds the change (Modes A, B, C unchanged) and parses the argument string by the grammar below.
+1. **Step 1** finds the change (Modes A, B, C unchanged), parses the argument string by the grammar below, reads and
+   checks the type file, and prints the review-type announcement.
 2. **Step 1.5** loads branch context, unchanged.
-3. **Step 1.6** (new) loads a type's required input, when it has one.
+3. **Step 1.6** (new) loads the work ticket, for `work-ticket` only, and waits on the operator when it cannot.
 4. **Step 2** runs automated checks, unchanged.
 5. **Step 3** becomes "Resolve the Review Type and Dispatch Review Agents"
-   ([D-17](artifacts/change-decision-log.md#trivial-decisions)): 3.0 names the run, 3.1 resolves the type, 3.2 reads
-   the roster from the type, and 3.3 to 3.5 brief and dispatch.
+   ([D-17](artifacts/change-decision-log.md#trivial-decisions)): 3.0 names the run and its folder, 3.1 confirms the
+   type, 3.2 reads the roster from the type and the config, and 3.3 to 3.5 brief and dispatch, filing each agent's
+   returned output.
 6. **Step 4** applies the type's checklist categories plus the YAGNI pass, which always runs.
-7. **Steps 5 to 10** are unchanged apart from the size wording, the report's type line, and the type's report section.
+7. **Steps 5 to 10** are unchanged apart from the size wording, the report's type line, the type's report section, and
+   Step 10 naming the run folder.
 
 ### The type-file contract
 
-Every type file has seven sections in a fixed order, and a section with nothing to say holds `none`
-([D-3](artifacts/change-decision-log.md#d-3-the-type-file-contract-is-seven-fixed-sections)):
+Every type file, shipped or configured, has six sections in a fixed order
+([D-3](artifacts/change-decision-log.md#d-3-the-type-file-contract-is-six-fixed-sections)):
 
-| Section                   | Value form                                                                    | Read at          |
-| ------------------------- | ----------------------------------------------------------------------------- | ---------------- |
-| `## Purpose`              | one sentence                                                                  | Steps 3.1, 8, 10 |
-| `## Required input`       | `none`, or `- name:`, `- accepts:`, `- binds:`, `- slug:` bullets             | Steps 1, 1.6     |
-| `## Roster`               | `- Always:` agent list; `- When relevant:` agent list or `none`               | Step 3.2         |
-| `## Checklist categories` | bold category names from `review-checklist.md`, or `none`                     | Step 4           |
-| `## Severity`             | `default`, or one sentence replacing the default severity rule                | Steps 3.3, 4     |
-| `## Instructions`         | `none`, or one blockquote appended to every agent prompt and applied to Step 4 | Steps 3.5, 4     |
-| `## Report section`       | `none`, or one fenced section layout rendered after Review Recommendation     | Step 8           |
+| Section                   | Value form                                                                          | Read at        |
+| ------------------------- | ----------------------------------------------------------------------------------- | -------------- |
+| `## Purpose`              | one sentence                                                                        | Steps 1, 8, 10 |
+| `## Roster`               | `- Always:` comma-separated agents; `- When relevant:` comma-separated agents or `none` | Step 3.2   |
+| `## Checklist categories` | comma-separated names as bolded in `review-checklist.md`, or `none`                 | Step 4         |
+| `## Severity`             | `default`, or one sentence replacing the default severity rule                      | Steps 3.3, 4   |
+| `## Instructions`         | `none`, or one blockquote appended to every agent prompt and applied to Step 4      | Steps 3.5, 4   |
+| `## Report section`       | `none`, or one fenced section layout followed by the rules for filling it           | Step 8         |
+
+A missing section stops the run before Step 2 with `Review type file {path} is missing section "{name}". No review ran.`
+A category name `review-checklist.md` does not bold is skipped with a one-line note.
 
 The worked example, `han-coding/skills/code-review/references/types/work-ticket.md`:
 
@@ -118,15 +137,6 @@ The worked example, `han-coding/skills/code-review/references/types/work-ticket.
 ## Purpose
 
 Verify that the change on this branch resolves the named work ticket.
-
-## Required input
-
-- name: ticket
-- accepts: a path to a readable local file, or an `http://` or `https://` URL
-- binds: `$ticket_ref` (the token as given) and `{run_directory}/ticket.md` (the loaded text, written by Step 1.6)
-- slug: local path → file basename without extension (`docs/tickets/my-ticket.md` → `my-ticket`);
-  `https://github.com/{owner}/{repo}/issues/{n}` → `issue-{n}`; any other URL → last non-empty path segment,
-  lowercased (`https://acme.atlassian.net/browse/PROJ-42` → `proj-42`)
 
 ## Roster
 
@@ -152,83 +162,189 @@ default
 ```
 ## Ticket Resolution
 
-**Ticket:** {$ticket_ref} | **Verdict:** {Resolved | Partially resolved | Not resolved}
+**Ticket:** {$ticket_ref} | **Verdict:** {Resolved | Partially resolved | Not resolved | Not verified}
 
 | Ticket requirement | Status | Evidence |
 | ------------------ | ------ | -------- |
 | {requirement, quoted from the ticket} | {Met | Partial | Not met} | {`file:line`, or the WARN-### that records it} |
 ```
 
-Verdict: Resolved when no GAP-derived finding survives Step 7.4; Not resolved when any surviving one is Missing or
-Divergent; Partially resolved otherwise.
+Rows come from gap-analyzer's Requirement Map, or from Step 4's by-hand sweep in manual-only mode. After Step 7.4, a
+row is Not met when a surviving Missing or Divergent finding names it, Partial when a surviving Partial finding names
+it, and otherwise keeps the map's status; a row whose gap finding was discarded is Met, with the evidence
+"GAP-### discarded at validation". Verdict: Not verified when the table has no rows, with one line saying why; Resolved
+when every row is Met; Not resolved when any row is Not met; Partially resolved otherwise.
 ````
 
-The other five type files follow the same layout. Their rosters and checklist categories are in
-[D-4](artifacts/change-decision-log.md#d-4-the-first-set-of-types); their `Required input`, `Instructions`, and
-`Report section` are `none`, and their `Severity` is `default`.
+The other five shipped type files follow the same layout. Their rosters and checklist categories are in
+[D-4](artifacts/change-decision-log.md#d-4-the-first-set-of-types); their `Instructions` and `Report section` are
+`none`, and their `Severity` is `default`.
+
+### Review types and agents from `.han/config.md`
+
+A team declares its own types, and attaches agents to any type, in either config file
+([D-20](artifacts/change-decision-log.md#d-20-hanconfigmd-can-declare-review-types-that-han-does-not-ship),
+[D-21](artifacts/change-decision-log.md#d-21-hanconfigmd-can-attach-agents-to-a-review-type-and-extra-agents-stays-with-the-default-run)):
+
+```markdown
+## Code Review Types
+
+- pii-check: .han/review-types/pii-check.md
+- hipaa-compliance: ~/review-types/hipaa-compliance.md
+
+## Code Review Type Agents
+
+- testing: acme:mutation-tester
+- pii-check: acme:pii-scanner
+```
+
+A configured type file follows the same six-section contract. For example, `.han/review-types/pii-check.md`:
+
+```markdown
+# Review type: pii-check
+
+## Purpose
+
+Whether the change stores, logs, or sends personal data without the handling our policy requires.
+
+## Roster
+
+- Always: acme:pii-scanner, han-core:adversarial-security-analyst
+- When relevant: han-core:data-engineer
+
+## Checklist categories
+
+Data Isolation, Error Handling
+
+## Severity
+
+Any finding that exposes personal data is at least a Warning, even when uncertain.
+
+## Instructions
+
+> This is a PII review under the team's data-handling policy. Treat names, emails, account numbers, and government
+> identifiers as personal data. Report only findings that touch personal data.
+
+## Report section
+
+none
+```
+
+The rules, in short:
+
+- Tokens are lowercase letters, digits, and hyphens, starting with a letter. A shipped token, a retired size word, or
+  `default` is reserved: the line is ignored with a one-line note naming the file.
+- Paths resolve as `writing-voice` does. When both files declare one token, the project file wins.
+- The type file is read only when its token is invoked. A missing file or section stops that run with
+  `Review type "{token}" is declared in the {project|personal} .han/config.md as {path}, but {the file was not found | its "{name}" section is missing}. No review ran.`
+  This becomes the config rule's second exception to "a bad config can never fail a skill run".
+- An agent with a roster-table row keeps its signal under `When relevant`. An agent without one (D-1's last row) runs
+  whenever the type runs. Its output is filed as `{agent name with ":" as "-"}.md` with the EXT series.
+- Agents attached under `## Code Review Type Agents` run on every run of that type, with no signal gate, and on the
+  default run when the type is in the default set.
+- `## Extra Agents` reaches only the default run, under today's signal rule. Typed runs ignore it silently.
+- Configured types never join the default run.
 
 ### The argument grammar
 
 The skill parses the raw argument string itself rather than trusting the harness's `arguments:` binding, which nobody
-could inspect
+could inspect, and the frontmatter drops `arguments: size`
 ([D-7](artifacts/change-decision-log.md#d-7-the-argument-grammar)):
 
 ```
-argument-hint: "[type: security | testing | architecture | observability | maintainability | work-ticket <ticket path or URL>] [focus areas, or file paths in Mode C]"
+argument-hint: "[type: security | testing | architecture | observability | maintainability | work-ticket <ticket> | a type from .han/config.md] [focus areas, or file paths in Mode C]"
 
-args        := [ type-clause ] [ rest ]
-type-clause := "security" | "testing" | "architecture" | "observability" | "maintainability"
-             | "work-ticket" SP ticket-ref
-ticket-ref  := a token naming a readable file | a token beginning "http://" or "https://"
-rest        := the remaining string, verbatim → $focus_areas ("none provided" when empty);
-               in Mode C, tokens in rest that resolve as paths or globs also build the file list
-first token := compared exactly, lowercased, against the Token column of ## Review Types
+args         := [ retired-size ] [ type-clause ] [ rest ]
+retired-size := "small" | "medium" | "large" | "dynamic"
+                (recognized only as the first token, and only when it is the whole string or the next token is a type token)
+type-clause  := type-token | "work-ticket" SP ticket-ref
+type-token   := a Token from SKILL.md's ## Review Types table other than work-ticket,
+                or a token declared under ## Code Review Types in either .han/config.md
+ticket-ref   := the next token as given; a double-quoted token may contain spaces
+rest         := the remaining string, verbatim → $focus_areas ("none provided" when empty);
+                in Mode C, tokens in rest that resolve as paths or globs also build the file list
+matching     := tokens split on whitespace and compare case-insensitively; a quoted first token is never a type token
 ```
 
-A first token that is not a type token stays in the focus text, as it does today. A retired size word is dropped with
-the note `Size options were removed from code review; "{word}" was ignored.`
-([D-19](artifacts/change-decision-log.md#trivial-decisions)). Step 3.1 always prints
-`Review type: {token or "default"} ({"passed as first argument" | "no type given"})` before dispatch, so a mistyped
-token shows up before any agent runs. The decision log carries the full table of worked invocations.
+A first token that is not a type token stays in the focus text, as it does today. A Mode C path named like a type is
+written `./testing`. A retired size word is dropped with the note
+`Size options were removed from code review; "{word}" was ignored.`
+([D-19](artifacts/change-decision-log.md#trivial-decisions)) only when it stands alone or before a type token, so
+"large file uploads" keeps its first word.
+
+Step 1 ends, before Step 2 runs anything, by printing:
+
+```
+Review type: {token}: {Purpose}{ (declared in the project .han/config.md | declared in the personal .han/config.md)}
+Focus: {$focus_areas}
+```
+
+or, with no type token:
+
+```
+Review type: default (no type given{; "{first word}" is not a review type, so it is read as focus text})
+Available types: {every shipped token}{, every configured token}
+Focus: {$focus_areas}
+```
+
+`work-ticket` with nothing after it stops with
+`work-ticket needs a ticket reference: a file path, a URL, or an ID. Usage: work-ticket <ticket> [focus]. No review ran.`
+The decision log carries the full table of worked invocations.
 
 ### One default severity rule, which a type may override
 
 Every run uses today's Medium rule unless its type says otherwise: Critical and Warning findings escalate, and a
 Suggestion is raised only when this change directly introduces it. Manual and agent findings both prefer the lower
 severity when uncertain. A type file's `## Severity` section holds `default` or one sentence that replaces the rule for
-that type; Step 3.3 puts it into the calibration directive and Step 4 applies it. All six first types hold `default`,
-and a run with no type always uses the default
-([D-8](artifacts/change-decision-log.md#d-8-one-default-severity-rule-replaces-the-size-ladder-and-a-type-may-override-it)). The directive's first line
-becomes `This is a **{type}** review of a change touching {N} files.` The size-independent half of the directive stays
-as it is
+that type; Step 3.3 puts it into the calibration directive and Step 4 applies it. All six shipped types hold
+`default`, and a run with no type always uses the default
+([D-8](artifacts/change-decision-log.md#d-8-one-default-severity-rule-replaces-the-size-ladder-and-a-type-may-override-it)).
+The directive's first line becomes `This is a **{type}** review of a change touching {N} files.` The size-independent
+half of the directive stays as it is
 ([C-4](artifacts/current-state-findings.md#c-4-the-size-independent-half-of-the-calibration-directive-is-reusable-shared-flow)).
 
-### Run names and the working folder
+### Run names, the working folder, and how findings are filed
 
-Each run gets its own folder, named before dispatch
+Each run gets its own folder, named at Step 3.0 before dispatch
 ([D-10](artifacts/change-decision-log.md#d-10-each-run-gets-its-own-working-folder-and-a-typed-report-name)):
 
 ```
-{run_name}      = code-review-{slug}            (default run)
-                = code-review-{slug}-{type}     (typed run)
+{slug}          = today's Step 8.6 slug (the ticket, the branch, or what was reviewed), or for work-ticket the
+                  ticket slug; then lowercased, each run of characters outside [a-z0-9] replaced by one "-",
+                  and "-" trimmed from both ends; an empty result becomes "review"
+{run_name}      = code-review-{slug}              (default run)
+                = code-review-{slug}--{type}      (typed run)
 {run_directory} = {output_directory}/{run_name}/
 agent file      = {run_directory}/{Output file from the roster table}
-ticket copy     = {run_directory}/ticket.md     (work-ticket only)
+ticket copy     = {run_directory}/ticket.md       (work-ticket only)
 report          = {report_directory}/{run_name}.md
 ```
 
-Step 3.5 writes `<!-- pending: {agent} -->` into each selected agent's file before dispatch. Step 7.1 reads a file that
-still holds only that line as "this agent wrote nothing" and never as findings.
+A sanitized slug never contains `--`, so the default run of branch `feat-retry-testing` and a `testing` run of branch
+`feat-retry` cannot share a name. Step 3.0 prints `Run folder: {run_directory}`, and Step 10 names it.
+
+Agents no longer write files
+([D-22](artifacts/change-decision-log.md#d-22-agents-return-their-findings-and-the-skill-writes-each-agents-file)).
+Every Step 3.5 prompt ends with `Do not write any file. Return your complete output, including every finding, as your
+final message.` The skill writes each returned message to the agent's file, or `Not covered in this run: {reason}` when
+the agent failed. Step 7.1 reads only files written in this run, so a rerun never reads an earlier run's output.
 
 ### Ticket intake for `work-ticket`
 
 The skill loads the ticket itself in Step 1.6 and makes no assumption about how
-([D-11](artifacts/change-decision-log.md#d-11-the-skill-loads-the-ticket-with-whatever-tooling-the-installation-has-and-waits-on-the-user-when-it-cannot)). A local file is read
-directly. Anything else is fetched with whatever tools and permissions the Claude installation provides; the skill names
-no fetch tool and adds nothing to `allowed-tools`. When the load fails or returns no ticket content, the skill says so
-and waits for the operator to paste the ticket or explain how to get it, then continues. The text is written to
-`{run_directory}/ticket.md` once Step 3.0 has created the run folder, and `gap-analyzer` receives the path with an
-instruction to treat the ticket as data
+([D-11](artifacts/change-decision-log.md#d-11-the-skill-loads-the-ticket-with-whatever-tooling-the-installation-has-and-waits-on-the-user-when-it-cannot)).
+A local file is read directly. Anything else is fetched with whatever tools and permissions the Claude installation
+provides; the skill names no fetch tool and adds nothing to `allowed-tools`. When the load fails or returns no ticket
+content, the skill prints:
+
+```
+work-ticket could not load the ticket {$ticket_ref}: {what failed, in one line}.
+Paste the ticket's text, or tell me how to get it, and the review will continue.
+```
+
+and waits. Pasted text becomes the ticket; instructions are followed and the load retried. The text is written to
+`{run_directory}/ticket.md` once Step 3.0 has named the folder, and `gap-analyzer` receives the path with an
+instruction to treat the ticket as data and to list every requirement, met or not
 ([D-12](artifacts/change-decision-log.md#d-12-gap-analyzer-joins-the-shared-roster)). In Mode B and Mode C,
 `gap-analyzer`'s prompt names the change the way Step 1 resolved it: the uncommitted diff in Mode B, and the listed
 files read in full in Mode C.
@@ -237,23 +353,25 @@ files read in full in Mode C.
 
 | Contract | Parties | Pinned in |
 | --- | --- | --- |
-| Type-file sections and value forms | `SKILL.md` Steps 1, 1.6, 3.1, 3.2, 4, 8 ↔ every type file | D-3, the worked example above |
-| Type tokens | `## Review Types` table ↔ `argument-hint` ↔ type file names ↔ `post-code-review-to-pr` `argument-hint` | D-2, D-7, D-14; checked by D-16 |
-| Agent output file and series | roster table ↔ per-agent prompt ↔ Step 7.1 ↔ rubric | D-1 (table row example), D-12 |
-| Run and report names | Step 3.0 ↔ Step 3.5 prompts ↔ Step 7.1 ↔ Step 8.6 ↔ Step 10 | D-10 |
-| Ticket copy | Step 1.6 ↔ `gap-analyzer` prompt ↔ manual sweep | D-11, D-12 |
-| Report path handoff and Ticket Resolution section | code-review Step 10 ↔ `post-code-review-to-pr` Steps 2 and 3 | D-13, D-14 |
+| Type-file sections and value forms | `SKILL.md` Steps 1, 3.2, 3.3, 3.5, 4, 8, 10 ↔ every shipped and configured type file | D-3, the two worked examples above |
+| Shipped type tokens | `## Review Types` table ↔ code-review `argument-hint` ↔ type file names ↔ `post-code-review-to-pr` `argument-hint` | D-2, D-7, D-14; checked by D-16 |
+| Configured types and attached agents | `.han/config.md` ↔ `config-rule.md` and its copies ↔ code-review Steps 1 and 3.2 ↔ `docs/configuration.md` | D-20, D-21, the config example above |
+| Agent output file and series | roster table, including the last row ↔ per-agent prompt ↔ Step 3.5 filing ↔ Step 7.1 ↔ rubric | D-1, D-12, D-22 |
+| Run and report names | Step 3.0 ↔ Step 3.5 filing ↔ Step 7.1 ↔ Step 8.6 ↔ Step 10 | D-10 |
+| Ticket copy and Requirement Map | Step 1.6 ↔ Step 3.0 ↔ `gap-analyzer` prompt ↔ Step 8 report section ↔ manual sweep | D-11, D-12, D-13 |
+| Report path, type line, and Ticket Resolution | code-review Step 10 and report header ↔ `post-code-review-to-pr` Steps 2 and 3 | D-13, D-14, D-18 |
 
 ## Surface Delta
 
 ### S-1: Roster table in `references/agent-dispatch.md` — Re-scoped
 
 **Target state.** `agent-dispatch.md` carries one roster table with the columns Agent, Signal, File-list slice, Output
-file, and Series, one row per agent. It is the single home for which file each agent writes and which finding-ID series
-its findings use. The per-agent directives, per-agent prompts, and manual-sweep rows stay in the same file, keyed by
-agent.
+file, and Series, one row per shipped agent, plus a last row for any agent without one (S-30). It is the single home for
+which file each agent's output is filed under and which finding-ID series its findings use. The per-agent directives,
+per-agent prompts, and manual-sweep rows stay in the same file, keyed by agent.
 
-**Behavior.** Preserving. Every agent receives the same prompt and writes to the same file name it does today.
+**Behavior.** Preserving. Every agent receives the same prompt, apart from S-31's last sentence, and its output keeps
+the same file name.
 
 **Why.** Per-agent data agrees across nine tables only by convention, and one list is already stale.
 
@@ -261,22 +379,24 @@ agent.
 
 ### S-2: Step 7.1 output-file list and `output-verification.md` item 2 — Re-scoped
 
-**Target state.** Step 7.1 reads, for each agent dispatched at Step 3.5, the Output file the roster table names. Item 2
-of `references/output-verification.md` checks findings from every dispatched agent by pointing at the roster table. Neither lists agents.
+**Target state.** Step 7.1 reads, for each agent dispatched at Step 3.5, the file Step 3.5 wrote for it in this run.
+Item 2 of `references/output-verification.md` checks findings from every dispatched agent by pointing at the roster
+table. Neither lists agents.
 
-**Behavior.** Preserving. The same files are read; the verification check covers all 11 agents instead of 8.
+**Behavior.** Changing (minor). The same files are read; the verification check covers all 11 agents instead of 8, so
+findings from three more agents are checked.
 
 **Why.** Removes two duplicate agent lists, one of them stale.
 
-**Depends on.** S-1.
+**Depends on.** S-1, S-31.
 
 **Decision.** [D-1](artifacts/change-decision-log.md#d-1-type-files-name-agents-everything-about-briefing-an-agent-stays-shared-and-keyed-by-agent)
 
 ### S-3: The `size` argument and the `default-swarm-size` read — Removed
 
 **Target state.** Code review has no size argument and reads no size from configuration. A first token of `small`,
-`medium`, `large`, or `dynamic` is dropped with a one-line note. Which concerns a review covers is set by the review
-type alone, and which severities it reports is set by the single rule in S-4.
+`medium`, `large`, or `dynamic` is dropped with a one-line note when it stands alone or before a type token. Which
+concerns a review covers is set by the review type alone, and which severities it reports is set by S-4.
 
 **Behavior.** Changing. `/code-review large` no longer widens the review, and `default-swarm-size` no longer affects
 code review. Settled by the recorded boundary ("replace the current sizing options for code reviews") and the
@@ -291,11 +411,10 @@ confirmation turn.
 ### S-4: Severity calibration in the Step 3.3 directive — Re-scoped
 
 **Target state.** The Step 3.3 calibration directive carries the type's `## Severity` sentence when it is not
-`default`, and otherwise one default rule: Critical and Warning
-findings escalate, and a Suggestion is raised only when this change directly introduces it. It remains the single
-authoritative home for severity calibration. The Review Constraints preamble, the Mode B and Mode C note, the Step 7.3
-heading, the validator brief in `finding-filters.md`, the YAGNI wording in `review-checklist.md`, and Step 10 point at
-it without naming a size.
+`default`, and otherwise one default rule: Critical and Warning findings escalate, and a Suggestion is raised only when
+this change directly introduces it. It remains the single authoritative home for severity calibration. The Review
+Constraints preamble, the Mode B and Mode C note, the Step 7.3 heading, the validator brief in `finding-filters.md`, the
+YAGNI wording in `review-checklist.md`, and Step 10 point at it without naming a size.
 
 **Behavior.** Changing. Former Small runs gain Suggestions the change introduced. Former Large runs lose pre-existing
 Suggestions, and their uncertain Warnings become Suggestions, so a PR review can post `COMMENT` where it posted
@@ -310,12 +429,13 @@ the per-type override.
 
 ### S-5: Argument grammar (frontmatter and Step 1 parse) — Re-scoped
 
-**Target state.** The frontmatter declares `arguments: type` and the `argument-hint` given in Target State. Step 1
-parses the raw argument string by the pinned grammar into the type, the type's required input, `$focus_areas`, and,
-in Mode C, the file list.
+**Target state.** The frontmatter has no `arguments:` line and carries the `argument-hint` given in Target State. Step 1
+parses the raw argument string by the pinned grammar into the retired-size note, the type, the ticket reference,
+`$focus_areas`, and, in Mode C, the file list.
 
-**Behavior.** Preserving for every invocation whose first token is neither a type token nor a size word. Size words are
-covered by S-3.
+**Behavior.** Preserving for every invocation whose first token is not a type token, and is not a size word standing
+alone or before a type token. Size words are covered by S-3; a focus phrase whose first word is a type token is listed
+under Risks.
 
 **Why.** One positional slot served three readings with no stated rule.
 
@@ -325,35 +445,36 @@ covered by S-3.
 
 ### S-6: `## Review Types` section in `SKILL.md` — Added
 
-**Target state.** `SKILL.md` has a `## Review Types` section holding the type table (token, link, purpose), the default
-set, and the default always-run agents. It is the only list of type tokens and the only link to each type file.
+**Target state.** `SKILL.md` has a `## Review Types` section holding the shipped type table (token, link, purpose),
+the default set, the default always-run agents, what else joins the default run, and the pointer to configured types.
+It is the only list of shipped tokens and the only link to each shipped type file.
 
 **Behavior.** Preserving (new structure).
 
 **Why.** The plugin-builder guidance requires a direct link from `SKILL.md` to every reference file, and the default
 run needs a named set.
 
-**Decision.** [D-2](artifacts/change-decision-log.md#d-2-skillmd-holds-the-only-list-of-review-types-type-files-carry-no-links), [D-6](artifacts/change-decision-log.md#d-6-no-type-means-one-run-of-the-default-set-with-todays-roster-rule)
+**Decision.** [D-2](artifacts/change-decision-log.md#d-2-skillmd-lists-the-shipped-review-types-type-files-carry-no-links), [D-6](artifacts/change-decision-log.md#d-6-no-type-means-one-run-of-the-default-set-with-todays-roster-rule)
 
 ### S-7: The type-file contract — Added
 
-**Target state.** Every file in `references/types/` has a `# Review type: {token}` title and the seven sections Purpose,
-Required input, Roster, Checklist categories, Severity, Instructions, and Report section, in that order, each holding a
-value of the pinned form, `none`, or (for Severity) `default`. Step 3.1 stops with `Review type file {path} is missing section "{name}"` when one is absent.
+**Target state.** Every type file, shipped or configured, has a `# Review type: {token}` title and the six sections
+Purpose, Roster, Checklist categories, Severity, Instructions, and Report section, in that order, each holding a value of
+the pinned form, `none`, or (for Severity) `default`. Step 1 stops before Step 2 when a section is absent.
 
 **Behavior.** Preserving (new structure).
 
-**Why.** `SKILL.md` and every type file must agree on these fields independently.
+**Why.** `SKILL.md` and every type file, including ones a team writes, must agree on these fields independently.
 
 **Depends on.** S-6.
 
-**Decision.** [D-3](artifacts/change-decision-log.md#d-3-the-type-file-contract-is-seven-fixed-sections)
+**Decision.** [D-3](artifacts/change-decision-log.md#d-3-the-type-file-contract-is-six-fixed-sections)
 
 ### S-8: `references/types/security.md` — Added
 
 **Target state.** The `security` type always runs `han-core:adversarial-security-analyst`, adds no other agent, and
-sweeps Data Isolation, Error Handling, and API Design by hand. It is the only focused type that runs the security
-check.
+sweeps Data Isolation, Error Handling, and API Design by hand. It is the only focused shipped type that runs the
+security check.
 
 **Behavior.** Changing, as a set with S-9 to S-12: a run with any other type token runs no security check. The operator
 decided this ("'security' will be it's own type, and will not automatically run when calling other types").
@@ -419,71 +540,76 @@ Documentation, Code Style & Patterns, Architecture Decision Records, and Packagi
 
 ### S-13: Step 3.2 agent selection — Re-scoped
 
-**Target state.** Step 3.2 builds the roster from the resolved type: every agent on its `Always` line, plus every agent
-on its `When relevant` line whose roster-table signal fires. For the default run it takes the union of the default
-set's agents under the default rule in `## Review Types`. Extra Agents from configuration and agents the user named
-explicitly join as they do today. Step 3.2 no longer carries an always-dispatch list of its own.
+**Target state.** Step 3.2 builds the roster from the resolved type: every agent on its `Always` line, every agent on
+its `When relevant` line whose roster-table signal fires (an agent without a signal runs regardless), and every agent
+`.han/config.md` attaches to the type. For the default run it takes the union of the default set's agents under the
+default rule in `## Review Types`, plus agents attached to a default-set type, plus `## Extra Agents` under today's
+signal rule. A typed run does not consider `## Extra Agents`. Agents the user named explicitly join as they do today.
+Step 3.2 no longer carries an always-dispatch list of its own.
 
 **Behavior.** Preserving for the default run. Changing for typed runs, per S-8.
 
-**Why.** Which agents run is now a property of the type.
+**Why.** Which agents run is now a property of the type and the config.
 
-**Depends on.** S-1, S-6, S-8 to S-12.
+**Depends on.** S-1, S-6, S-8 to S-12, S-28.
 
-**Decision.** [D-5](artifacts/change-decision-log.md#d-5-security-is-its-own-type-and-no-type-points-at-another), [D-6](artifacts/change-decision-log.md#d-6-no-type-means-one-run-of-the-default-set-with-todays-roster-rule)
+**Decision.** [D-5](artifacts/change-decision-log.md#d-5-security-is-its-own-type-and-no-type-points-at-another), [D-6](artifacts/change-decision-log.md#d-6-no-type-means-one-run-of-the-default-set-with-todays-roster-rule), [D-21](artifacts/change-decision-log.md#d-21-hanconfigmd-can-attach-agents-to-a-review-type-and-extra-agents-stays-with-the-default-run)
 
-### S-14: Step 3 title and Step 3.1 — Re-scoped
+### S-14: Step 3 title, Step 3.1, and the review-type announcement — Re-scoped
 
-**Target state.** Step 3 is "Resolve the Review Type and Dispatch Review Agents". Step 3.1 resolves the type from the
-Step 1 parse, reads its type file, stops on a missing section, and prints the review-type line. Steps 3.2 to 3.5 keep
-their numbers.
+**Target state.** Step 3 is "Resolve the Review Type and Dispatch Review Agents". The type is resolved, its file read
+and checked, and the announcement printed at the end of Step 1, before Step 2. Step 3.1 becomes "Confirm the review
+type" and carries the resolved type forward. Steps 3.2 to 3.5 keep their numbers.
 
-**Behavior.** Changing only in what is announced: the run states its type instead of a size band.
+**Behavior.** Changing only in what is announced, and when: the run states its type, its purpose, and its focus text
+before automated checks run, instead of a size band after them.
 
-**Why.** Step 3.1 was the size classifier.
+**Why.** Step 3.1 was the size classifier, and an announcement after Step 2 came too late to catch a mistyped token.
 
 **Depends on.** S-5, S-7.
 
-**Decision.** [D-6](artifacts/change-decision-log.md#d-6-no-type-means-one-run-of-the-default-set-with-todays-roster-rule), [D-17](artifacts/change-decision-log.md#trivial-decisions)
+**Decision.** [D-7](artifacts/change-decision-log.md#d-7-the-argument-grammar), [D-17](artifacts/change-decision-log.md#trivial-decisions)
 
 ### S-15: Run naming, from Step 8.6 to a new Step 3.0 — Moved
 
-**Target state.** Step 3.0 resolves the slug and `{run_name}` before dispatch, by the same slug rules Step 8.6 used,
-plus a type's `slug:` rule when it has one. Step 8.6 writes the report under `{run_name}.md` and no longer derives the
-slug.
+**Target state.** Step 3.0 resolves the slug and `{run_name}` before dispatch, by the slug rules Step 8.6 used, the
+ticket slug for `work-ticket`, and the sanitizing rule. It prints the run folder and writes `ticket.md` for
+`work-ticket`. Step 8.6 writes the report under `{run_name}.md` and no longer derives the slug.
 
-**Behavior.** Preserving for the slug itself. The suffix is S-16's change.
+**Behavior.** Preserving for a slug that already uses only lowercase letters, digits, and hyphens. Other characters are
+now replaced. The type suffix is S-16's change.
 
-**Why.** The working folder has to be named before agents write into it.
+**Why.** The working folder has to be named before agent output is filed into it.
 
 **Decision.** [D-10](artifacts/change-decision-log.md#d-10-each-run-gets-its-own-working-folder-and-a-typed-report-name)
 
 ### S-16: Agent working files and the report name — Re-scoped
 
-**Target state.** Every agent writes into `{run_directory}`, a folder named for the run. A typed run's report is named
-`code-review-{slug}-{type}.md`; the default run's report keeps `code-review-{slug}.md`. Each selected agent's file holds
-a pending marker until the agent overwrites it, and Step 7.1 never reads a file still holding the marker as findings.
+**Target state.** Every agent's output is filed in `{run_directory}`, a folder named for the run. A typed run's report
+is named `code-review-{slug}--{type}.md`; the default run's report keeps `code-review-{slug}.md`.
 
 **Behavior.** Changing. Agent working files move from `docs/{name}.md` into a per-run folder, and typed reports carry a
 suffix. Settled by the recorded boundary ("so reviews can be parallelized").
 
 **Why.** Fixed names collide across parallel runs and can be read stale.
 
-**Depends on.** S-1, S-15.
+**Depends on.** S-1, S-15, S-31.
 
-**Migration.** Look for agent output under `docs/code-review-{slug}[-{type}]/` instead of `docs/`.
+**Migration.** Look for agent output under `docs/code-review-{slug}[--{type}]/` instead of `docs/`.
 
 **Decision.** [D-10](artifacts/change-decision-log.md#d-10-each-run-gets-its-own-working-folder-and-a-typed-report-name)
 
 ### S-17: Step 1.6, ticket loading — Added
 
-**Target state.** Step 1.6 runs only for `work-ticket`, in every git mode. It reads a local file with `Read` and fetches
-any other reference with whatever tooling the installation provides, naming no tool. On failure it prints the pinned
-message and waits for the operator's ticket text or instructions, then continues. `allowed-tools` is unchanged.
+**Target state.** Step 1.6 runs only for `work-ticket`, in every git mode, before Step 2. It reads a local file with
+`Read` and fetches any other reference with whatever tooling the installation provides, naming no tool. On failure it
+prints the pinned message and waits for the operator's ticket text or instructions, then continues. `allowed-tools` is
+unchanged.
 
-**Behavior.** Preserving (only `work-ticket` has required input).
+**Behavior.** Preserving (only `work-ticket` loads a ticket).
 
-**Why.** The type cannot do its job without the ticket, and the operator does not know in advance how each ticket is fetched.
+**Why.** The type cannot do its job without the ticket, and the operator does not know in advance how each ticket is
+fetched.
 
 **Depends on.** S-5, S-15.
 
@@ -491,8 +617,9 @@ message and waits for the operator's ticket text or instructions, then continues
 
 ### S-18: `han-core:gap-analyzer` in the shared roster — Added
 
-**Target state.** `gap-analyzer` has a roster-table row (output `ticket-gap-analysis.md`, series `GAP`), a prompt, a
-rubric section, an exemption from the Step 7.2 reachability gate, and a manual-sweep row.
+**Target state.** `gap-analyzer` has a roster-table row (output `ticket-gap-analysis.md`, series `GAP`), the pinned
+prompt asking for a Requirement Map of every requirement, a rubric section, an exemption from the Step 7.2 reachability
+gate, and a manual-sweep row.
 
 **Behavior.** Preserving (no existing type dispatches it).
 
@@ -504,10 +631,9 @@ rubric section, an exemption from the Step 7.2 reachability gate, and a manual-s
 
 ### S-19: `references/types/work-ticket.md` — Added
 
-**Target state.** The `work-ticket` type requires a ticket reference, always runs `han-core:gap-analyzer`, adds
-`han-core:test-engineer` when its signal fires, sweeps Correctness and Testing by hand, briefs every agent to judge the
-change against the ticket, and adds the Ticket Resolution section to the report. Its full text is the worked example in
-Target State.
+**Target state.** The `work-ticket` type always runs `han-core:gap-analyzer`, adds `han-core:test-engineer` when its
+signal fires, sweeps Correctness and Testing by hand, briefs every agent to judge the change against the ticket, and
+adds the Ticket Resolution section with its four verdicts. Its full text is the worked example in Target State.
 
 **Behavior.** Preserving (new type).
 
@@ -521,7 +647,8 @@ Target State.
 
 **Target state.** `docs/configuration.md` names seven sizing-aware skills and no longer mentions code review in the
 `default-swarm-size` section. `docs/sizing.md` no longer lists code review. ADR 0001 carries an appended note that
-code review moved to review types; its decision is unchanged. `config-rule.md` and its vendored copies are unchanged.
+code review moved to review types; its decision is unchanged. The `default-swarm-size` text in `config-rule.md` is
+unchanged; the rule's other changes are S-27 to S-29.
 
 **Behavior.** Preserving (documentation of S-3).
 
@@ -537,8 +664,8 @@ code review moved to review types; its decision is unchanged. `config-rule.md` a
 Recommendation that renders a type's `## Report section` when it is not `none`. Every other section, and their order,
 is unchanged.
 
-**Behavior.** Changing in one line: every report names its type, or `default`. Settled by D-18; the line names only
-the run's own type.
+**Behavior.** Changing in one line: every report names its type and purpose, or `default`. Settled by D-18; the line
+names only the run's own type.
 
 **Why.** Two posted reviews of one PR need to be told apart, and `work-ticket` needs its verdict section.
 
@@ -548,24 +675,25 @@ the run's own type.
 
 ### S-22: `han-github/skills/post-code-review-to-pr/SKILL.md` — Re-scoped
 
-**Target state.** The PR-posting skill passes its argument string to `/code-review` verbatim, so a leading type token
-selects that type. Its `argument-hint` carries the same type clause. Its posted body includes Ticket Resolution when
-present. When `/code-review` ends without naming a report path, it relays that message and stops.
+**Target state.** The PR-posting skill passes its argument string to `/code-review` verbatim, so a leading shipped or
+configured type token selects that type. Its `argument-hint` carries the same type clause. Its posted body includes the
+report's `**Review type:**` line, and Ticket Resolution when present. When `/code-review` ends without naming a report
+path, it relays the last message and stops without posting.
 
-**Behavior.** Changing for one case: free text that begins with a type token now runs that type. Settled by the recorded
-boundary (Operator-Stated Scope item 1).
+**Behavior.** Changing for one case: free text that begins with a type token now runs that type. The posted body gains
+one type line. Settled by the recorded boundary (Operator-Stated Scope item 1).
 
 **Why.** The operator wants types available when posting to a PR.
 
 **Depends on.** S-5, S-19, S-21.
 
-**Decision.** [D-14](artifacts/change-decision-log.md#d-14-post-code-review-to-pr-passes-the-argument-string-through-and-carries-ticket-resolution)
+**Decision.** [D-14](artifacts/change-decision-log.md#d-14-post-code-review-to-pr-passes-the-argument-string-through-and-carries-the-type-and-ticket-resolution)
 
 ### S-23: Step 4 manual review scope — Re-scoped
 
 **Target state.** Step 4 applies the type's checklist categories, or the union of the default set's for the default
-run, and always runs the YAGNI pass. The type's `## Instructions` apply to Step 4 as they do to the agents. Steps 2, 5,
-and 6 are unchanged.
+run, and always runs the YAGNI pass. The type's `## Instructions` and `## Severity` apply to Step 4 as they do to the
+agents. Steps 2, 5, and 6 are unchanged.
 
 **Behavior.** Preserving for the default run, whose union covers every category. New behavior for typed runs.
 
@@ -577,26 +705,36 @@ and 6 are unchanged.
 
 ### S-24: `scripts/review-types.bats` — Added
 
-**Target state.** A Bats file beside `detect-review-context.bats` checks four agreements: every type file and its table
-row and hint token; every type file's title and seven sections in order; every rostered agent's roster-table row and
-prompt; and the default set's checklist union against `review-checklist.md`.
+**Target state.** A Bats file beside `detect-review-context.bats` checks four agreements: every shipped type file
+against its table row and its token in both `argument-hint` lines; every shipped type file's title and six sections in
+order; every agent in a shipped roster against its roster-table row and prompt; and the default set's checklist union
+against the thirteen bold category lines in `review-checklist.md`, matched by the pattern D-16 pins.
 
 **Behavior.** Preserving (test only).
 
 **Why.** These agreements span files and have already drifted once.
 
-**Depends on.** S-1, S-6, S-7, S-8 to S-12.
+**Depends on.** S-1, S-6, S-7, S-8 to S-12, S-22.
 
-**Decision.** [D-16](artifacts/change-decision-log.md#d-16-a-bats-check-holds-the-type-contract-together)
+**Decision.** [D-16](artifacts/change-decision-log.md#d-16-a-bats-check-holds-the-shipped-type-contract-together)
 
 ### S-25: Manual-only mode — Re-scoped
 
-**Target state.** The manual-only disclosure says "Coverage absent: every agent the {type or default} review
-selected", and the sweep rows carry no size. The absent-coverage list is still whatever Step 3.2 selected.
+**Target state.** The manual-only disclosure lists the agents Step 3.2 selected by name, and the sweep rows carry no
+size:
 
-**Behavior.** Preserving. The disclosure names the same agents.
+```
+Manual-only mode: agent dispatch unavailable ({verbatim tool error, or "Agent tool not in allowed-tools"}).
+Manual review is the primary path. Coverage absent: {every agent Step 3.2 selected, by name}. See the sweep mapping for what substitutes.
+```
 
-**Why.** The disclosure text hard-codes today's always-run pair.
+The absent-coverage list is still whatever Step 3.2 selected. The existing row for `## Extra Agents` ("nothing
+substitutes") also covers attached agents and configured types' agents without a roster row.
+
+**Behavior.** Preserving. The disclosure names the same agents, by name rather than as "junior-developer, security, and
+every conditional agent".
+
+**Why.** The disclosure text hard-codes today's always-run pair (UX-015).
 
 **Depends on.** S-4, S-13.
 
@@ -604,128 +742,247 @@ selected", and the sweep rows carry no size. The absent-coverage list is still w
 
 ### S-26: Operator docs for code review and the PR skill — Re-scoped
 
-**Target state.** `han-coding/docs/skills/code-review.md` documents review types, the default set, the single severity
-rule, the run folder, and `work-ticket`, and no longer documents sizes. `han-coding/README.md`, `docs/skills/README.md`,
-and `docs/choosing-a-han-plugin.md` reuse its new summary line. `han-github/docs/skills/post-code-review-to-pr.md` no
-longer describes a size-aware roster. `CHANGELOG.md` records every Behavior Changes entry.
+**Target state.** `han-coding/docs/skills/code-review.md` documents review types, the default set, the default severity
+rule and its per-type override, configured types and attached agents (pointing at `docs/configuration.md` for the
+schema), the run folder, and `work-ticket`, and no longer documents sizes. `han-coding/README.md`,
+`docs/skills/README.md`, and `docs/choosing-a-han-plugin.md` reuse its new summary line.
+`han-github/docs/skills/post-code-review-to-pr.md` no longer describes a size-aware roster. `CHANGELOG.md` records
+every Behavior Changes entry.
 
 **Behavior.** Preserving (documentation).
 
 **Why.** Every doc site in C-22 describes sizes.
 
-**Depends on.** S-3 to S-25.
+**Depends on.** S-3 to S-25, S-27 to S-32.
 
-**Decision.** [D-4](artifacts/change-decision-log.md#d-4-the-first-set-of-types), [D-8](artifacts/change-decision-log.md#d-8-one-default-severity-rule-replaces-the-size-ladder-and-a-type-may-override-it), [D-10](artifacts/change-decision-log.md#d-10-each-run-gets-its-own-working-folder-and-a-typed-report-name)
+**Decision.** [D-4](artifacts/change-decision-log.md#d-4-the-first-set-of-types), [D-8](artifacts/change-decision-log.md#d-8-one-default-severity-rule-replaces-the-size-ladder-and-a-type-may-override-it), [D-10](artifacts/change-decision-log.md#d-10-each-run-gets-its-own-working-folder-and-a-typed-report-name), [D-20](artifacts/change-decision-log.md#d-20-hanconfigmd-can-declare-review-types-that-han-does-not-ship)
+
+### S-27: `## Code Review Types` in the config schema — Added
+
+**Target state.** `han-core/references/config-rule.md` lists `## Code Review Types` in its Schema (token-to-path lines,
+the token form, the reserved names), resolves each path by its existing path rule, gives the project file precedence
+per token, and names a missing or malformed type file for an invoked token as the second exception in Degradation. The
+twelve vendored copies match it byte for byte. code-review's Step 1 reads the declared file when its token is invoked.
+
+**Behavior.** Preserving. A config without the section behaves as today, and other skills ignore the section silently.
+
+**Why.** The operator asked that teams be able to add review types Han does not ship.
+
+**Depends on.** S-5, S-7.
+
+**Decision.** [D-20](artifacts/change-decision-log.md#d-20-hanconfigmd-can-declare-review-types-that-han-does-not-ship)
+
+### S-28: `## Code Review Type Agents` in the config schema — Added
+
+**Target state.** `config-rule.md` lists `## Code Review Type Agents` in its Schema (type-token-to-agents lines),
+states that both files' lines add together, and covers an unknown token with a one-line note. code-review's Step 3.2
+dispatches every attached agent on runs of that type, and on the default run for a default-set type.
+
+**Behavior.** Preserving. A config without the section behaves as today.
+
+**Why.** The operator asked that a team be able to include its own agents in specific review types.
+
+**Depends on.** S-13, S-27.
+
+**Decision.** [D-21](artifacts/change-decision-log.md#d-21-hanconfigmd-can-attach-agents-to-a-review-type-and-extra-agents-stays-with-the-default-run)
+
+### S-29: `## Extra Agents` on code review — Re-scoped
+
+**Target state.** Code review considers `## Extra Agents` on the default run only, under today's signal rule. The
+config rule's "Extra agents joining the pool" part says a skill may scope the list to some of its runs and must say
+which in its own instructions. Every other skill is unchanged.
+
+**Behavior.** Preserving. The default run behaves as today; typed runs are new.
+
+**Why.** A typed report should stay on its one concern; per-type attachment (S-28) is how a team adds an agent to a
+focused review.
+
+**Depends on.** S-13, S-28.
+
+**Decision.** [D-21](artifacts/change-decision-log.md#d-21-hanconfigmd-can-attach-agents-to-a-review-type-and-extra-agents-stays-with-the-default-run)
+
+### S-30: Roster row for an agent without its own row — Added
+
+**Target state.** The roster table's last row covers any agent a configured type or a config line names that has no row
+of its own: full file list, output file `{agent name with ":" as "-"}.md`, series `EXT`, and a generic prompt. Step 7
+classifies EXT findings by the calibration directive alone, and the Step 7.2 reachability gate applies.
+
+**Behavior.** Preserving for shipped agents. An agent from `## Extra Agents` on the default run now has its output read
+(C-23), which is new behavior on a path that read nothing before.
+
+**Why.** Agents outside Han have no row, and today their output is never read.
+
+**Depends on.** S-1.
+
+**Decision.** [D-1](artifacts/change-decision-log.md#d-1-type-files-name-agents-everything-about-briefing-an-agent-stays-shared-and-keyed-by-agent)
+
+### S-31: Agents return their output; the skill files it — Re-scoped
+
+**Target state.** Every Step 3.5 prompt ends with `Do not write any file. Return your complete output, including every
+finding, as your final message.` The skill writes each returned message to the agent's file in `{run_directory}`, or
+`Not covered in this run: {reason}` when the agent failed. Step 7.1 reads only the files written in this run.
+
+**Behavior.** Pending the operator's decision (see Open Items). Working classification: Changing, because findings
+from the three specialists that cannot write a file now reliably reach the report.
+
+**Why.** Three shipped specialists cannot do what their prompt asks, extra agents' output is never read, and a rerun
+must not read a stale file.
+
+**Depends on.** S-1, S-15.
+
+**Decision.** [D-22](artifacts/change-decision-log.md#d-22-agents-return-their-findings-and-the-skill-writes-each-agents-file)
+
+### S-32: `docs/configuration.md` for review types and attached agents — Re-scoped
+
+**Target state.** `docs/configuration.md` documents `## Code Review Types` and `## Code Review Type Agents` in its
+annotated example and its section reference, with the six-section type-file contract and the `pii-check` example, and
+says `## Extra Agents` reaches only code review's default run.
+
+**Behavior.** Preserving (documentation).
+
+**Why.** It is the operator guide for the config file and carries the canonical annotated example.
+
+**Depends on.** S-27, S-28, S-29.
+
+**Decision.** [D-20](artifacts/change-decision-log.md#d-20-hanconfigmd-can-declare-review-types-that-han-does-not-ship), [D-21](artifacts/change-decision-log.md#d-21-hanconfigmd-can-attach-agents-to-a-review-type-and-extra-agents-stays-with-the-default-run)
 
 ## Behavior Changes
 
 1. **Size words do nothing.** `/code-review large` runs the default review and prints a note that the word was ignored.
-   Anyone who typed a size sees this. Decided by your request to replace sizing (S-3).
+   `/code-review large file uploads` now reads all three words as focus text, where today it ran a Large review focused
+   on "file uploads". Decided by your request to replace sizing (S-3).
 2. **The project's default size setting stops affecting code review.** A project with `default-swarm-size: large` used
-   to get every review at Large; now it gets the single rule, silently. Other skills still read the setting. Decided by
+   to get every review at Large; now it gets the default rule, silently. Other skills still read the setting. Decided by
    your request and the confirmed scope (S-3, S-20).
-3. **Minor suggestions change.** A review of one to three files now lists suggestions the change introduced, where it
-   used to hide them. A review of more than ten files no longer lists old suggestions the change did not cause. PR
-   A borderline issue on a change of more than ten files used to be a warning and is now a
+3. **Minor suggestions change, and big changes block less often.** A review of one to three files now lists suggestions
+   the change introduced, where it used to hide them. A review of more than ten files no longer lists old suggestions
+   the change did not cause. A borderline issue on a change of more than ten files used to be a warning and is now a
    suggestion, so a PR review whose only warnings were borderline posts as a comment instead of requesting changes.
-   Clear-cut problems still block. You chose this default, and a review type can set its own rule when it needs to
-   (S-4).
+   Clear-cut problems still block. You chose this default, and a review type can set its own rule (S-4).
 4. **A focused review skips security, without saying so.** `/code-review testing` runs no security check, and its
    report does not mention that. A bare `/code-review` still runs security. You decided this (S-8, S-13).
 5. **Agent working files move into a folder per run, and typed reports get a suffix.** For example
    `docs/security-analysis.md` becomes `docs/code-review-my-branch/security-analysis.md`, and a testing review's report
-   becomes `docs/code-review-my-branch-testing.md`. A bare review's report keeps its name. Decided by your goal of
-   parallel reviews (S-16).
-6. **Every report names its type.** A one-line header says which review type produced it (S-21).
+   becomes `docs/code-review-my-branch--testing.md`. A bare review's report keeps its name, unless the old name held
+   characters other than lowercase letters, digits, and hyphens. One folder per branch and type stays on disk. Decided by
+   your goal of parallel reviews (S-15, S-16).
+6. **Every report names its type, and so does the PR it is posted to.** A one-line header says which review type
+   produced it (S-21, S-22).
 7. **Posting to a PR can start a typed review.** If the text after `/post-code-review-to-pr` begins with a type name,
    such as "testing the retry logic", it now runs a `testing` review. Decided by your confirmed scope (S-22).
+8. **The review states its type before it starts work.** The announcement moves to the end of Step 1, before automated
+   checks, and shows the type's purpose and your focus text; a bare review lists the available types (S-14).
+9. **Specialist findings are filed by the skill.** Every agent returns its findings and the skill writes them to the run
+   folder. Pending your decision (S-31).
 
 ## Change Units
 
-Units 2 through 7 should land on one branch before a release, because the docs in Unit 7 describe the finished state.
+Units 2 through 8 should land on one branch before a release, because the docs in Unit 8 describe the finished state.
 Each unit still leaves the skill runnable and `npm test` passing.
 
-### Unit 1: Consolidate the roster table
+### Unit 1: Consolidate the roster table and file agent output from the skill
 
-**What it does.** Merges the signal and slice tables into one roster table with output-file and series columns, and
-points Step 7.1 and the verification check at it. Nothing a user sees changes.
+**What it does.** Merges the signal and slice tables into one roster table with output-file and series columns, points
+Step 7.1 and the verification check at it, and replaces each prompt's "Write your output to" with the return-and-file
+rule.
 
-**Delta entries.** S-1, S-2.
+**Delta entries.** S-1, S-2, S-31.
 
-**How you know it worked.** A default review on a sample branch dispatches the same agents and reads the same files as
-before; the verification check now names all 11 agents.
+**How you know it worked.** A default review on a sample branch dispatches the same agents as before, and a change
+touching module structure produces a filed `structural-analysis.md` with findings; the verification check now names
+all 11 agents.
 
-### Unit 2: Remove size and adopt the single severity rule
+### Unit 2: Remove size and adopt the default severity rule
 
-**What it does.** Deletes the size classifier and every size reading, adds the retired-word note, installs the single
-severity rule, and updates the sizing and configuration docs and ADR 0001. The default roster is still today's,
-selected inside Step 3.2.
+**What it does.** Deletes the size classifier and every size reading, adds the `retired-size` clause of the grammar
+with its note, installs the default severity rule, and updates the sizing and configuration docs and ADR 0001. The
+default roster is still today's, selected inside Step 3.2.
 
 **Delta entries.** S-3, S-4, S-20, and the size wording in S-25.
 
 **Ordering constraint.** After Unit 1, so the rewritten Step 3.3 and Step 7.1 land on the consolidated table.
 
-**How you know it worked.** A search for `{size}`, `$size`, and `default-swarm-size` under `han-coding/skills/code-review/`
-finds nothing; `/code-review large` prints the note and runs.
+**How you know it worked.** A search for `{size}`, `$size`, and `default-swarm-size` under
+`han-coding/skills/code-review/` finds nothing; `/code-review large` prints the note and runs; `/code-review large file
+uploads` prints no note and focuses on "large file uploads".
 
 ### Unit 3: Give each run its own folder
 
-**What it does.** Moves slug resolution to Step 3.0, writes agent files into `code-review-{slug}/`, and adds the pending
-marker. Reports keep today's name, because no type exists yet.
+**What it does.** Moves slug resolution to Step 3.0 with the sanitizing rule, and files agent output into
+`code-review-{slug}/`. Reports keep today's name, because no type exists yet.
 
 **Delta entries.** S-15, S-16 (without the type suffix).
 
-**Ordering constraint.** After Unit 1, which owns the output-file column.
+**Ordering constraint.** After Unit 1, which owns the output-file column and the filing rule.
 
-**How you know it worked.** Two default reviews of different branches run at once and leave two separate folders; an
-agent that fails to write shows as not covered rather than as stale findings.
+**How you know it worked.** Two default reviews of different branches run at once and leave two separate folders; a
+rerun where one agent fails shows that agent as not covered rather than reading its earlier file.
 
 ### Unit 4: Add the type mechanism and the five default-set types
 
-**What it does.** Adds `## Review Types`, the type-file contract, the five type files, the argument grammar, type-based
-Step 3.1 and 3.2, the default set, Step 4 scoping, the report's type line, the type suffix on run names, the generic
-manual-only line, and the Bats check.
+**What it does.** Adds `## Review Types` with the five default-set rows, the type-file contract, the five type files,
+the type clause of the grammar without `work-ticket`, the Step 1 announcement, type-based Step 3.1 and 3.2, the default
+set, Step 4 scoping, the report's type line, the `--{type}` suffix, the named manual-only line, and the Bats check.
 
 **Delta entries.** S-5 to S-14, S-16 (type suffix), S-21 (type line), S-23, S-24, S-25.
 
 **Ordering constraint.** After Units 2 and 3. The five types land together because the default set needs all five to
-reproduce today's roster, and Bats check 4 fails until they do.
+reproduce today's roster, and Bats check 4 fails until they do. `work-ticket` has no row, token, or file yet, so Bats
+check 1 passes.
 
 **How you know it worked.** `npm test` passes, including `review-types.bats`. A bare `/code-review` dispatches the same
-agents as before Unit 4. `/code-review testing` dispatches only the test and edge-case agents and writes
-`code-review-{slug}-testing.md`.
+agents as before Unit 4. `/code-review testing` prints its announcement before Step 2, dispatches only the test and
+edge-case agents, and writes `code-review-{slug}--testing.md`.
 
 ### Unit 5: Add `work-ticket`
 
-**What it does.** Adds Step 1.6, the `gap-analyzer` rows, the Step 7.2 exemption, the template's
-report-section slot, and the `work-ticket` type file.
+**What it does.** Adds the `work-ticket` row and `argument-hint` token, its grammar clause and stop message, Step 1.6,
+the `gap-analyzer` rows, the Step 7.2 exemption, the template's report-section slot, and the `work-ticket` type file.
 
 **Delta entries.** S-17, S-18, S-19, S-21 (report-section slot).
 
 **Ordering constraint.** After Unit 4.
 
 **How you know it worked.** `/code-review work-ticket docs/tickets/x.md` on a branch that meets half the ticket reports
-"Partially resolved" with a row per requirement; `/code-review work-ticket missing.md` prints the pinned message and waits; pasting the ticket's
-text continues the review.
+"Partially resolved" with a row for every requirement, met ones included. `/code-review work-ticket missing.md` prints
+the pinned message and waits; pasting the ticket's text continues the review. A run where `gap-analyzer` fails reports
+"Not verified".
 
-### Unit 6: Pass types through `post-code-review-to-pr`
+### Unit 6: Configured types and attached agents
 
-**What it does.** Passes the argument string through verbatim, matches the argument hint, carries Ticket Resolution,
-and stops cleanly when code review stops.
+**What it does.** Adds `## Code Review Types` and `## Code Review Type Agents` to the canonical config rule and re-syncs
+its twelve copies, scopes `## Extra Agents` to code review's default run, adds the roster table's last row and generic
+prompt, and teaches Step 1 and Step 3.2 to read both sections.
+
+**Delta entries.** S-27, S-28, S-29, S-30, and the configured-type parts of S-5, S-13, and S-14.
+
+**Ordering constraint.** After Unit 4, which owns the contract and the grammar. Before Unit 7, so the PR skill's hint
+can mention configured types.
+
+**How you know it worked.** A project config declaring `pii-check` with the worked example file runs
+`/code-review pii-check`, dispatches the attached and rostered agents, applies its severity sentence, and writes
+`code-review-{slug}--pii-check.md`. Pointing the token at a missing file stops with the pinned message. A copy check
+shows every vendored `config-rule.md` identical to the canonical one.
+
+### Unit 7: Pass types through `post-code-review-to-pr`
+
+**What it does.** Passes the argument string through verbatim, matches the argument hint, carries the type line and
+Ticket Resolution, and stops cleanly when code review ends without a report.
 
 **Delta entries.** S-22.
 
-**Ordering constraint.** After Units 4 and 5.
+**Ordering constraint.** After Units 5 and 6. Bats check 1 now covers the PR skill's hint.
 
-**How you know it worked.** `/post-code-review-to-pr testing` drafts a body from a `-testing` report; a `work-ticket`
-run with a bad path waits for the ticket inside the PR skill's run, and posts once the review completes.
+**How you know it worked.** `/post-code-review-to-pr testing` drafts a body from a `--testing` report with the type
+line; a `work-ticket` run with a bad path waits for the ticket inside the PR skill's run and posts once the review
+completes.
 
-### Unit 7: Update the operator docs
+### Unit 8: Update the operator docs
 
 **What it does.** Rewrites the long-form code-review doc, the scent lines that reuse its summary, the PR skill's doc,
-and the CHANGELOG entry listing every Behavior Changes item.
+`docs/configuration.md`, and the CHANGELOG entry listing every Behavior Changes item.
 
-**Delta entries.** S-26.
+**Delta entries.** S-26, S-32.
 
 **Ordering constraint.** Last.
 
@@ -735,32 +992,47 @@ and the CHANGELOG entry listing every Behavior Changes item.
 ## Risks
 
 - **A focus word that matches a type.** `/code-review testing the retry path` used to be a broad review focused on
-  testing; it becomes a `testing` review. The Step 3.1 announcement shows this before dispatch. Blast radius: one run.
+  testing; it becomes a `testing` review. A configured token adds more such words. The announcement shows this before
+  Step 2 runs. Blast radius: one run.
+- **Parallel runs share automated checks.** Two typed reviews started at once both run Step 2's builds and tests in one
+  working tree, which can collide on build output, ports, or test databases and surface failures that are not in the
+  change (JD-012, R6). The docs say to expect this; scoping Step 2 by type is deferred.
 - **Unit 4 is large.** It touches `SKILL.md`, `agent-dispatch.md`, the template, and six new files at once. The Bats
   check and a before-and-after comparison of the default roster are the early signals.
 - **A fetch that returns a sign-in page.** A tracker that requires sign-in can return a login page, and the "no ticket
   content" check is a judgment the model makes. A false pass would verify the change against a login page. The
   `ticket.md` copy in the run folder lets the operator see what was checked, and the Ticket Resolution table lists the
   requirements it found.
+- **The ticket copy lands in the output folder.** `ticket.md` sits under `docs/` by default and can be committed with
+  the report, carrying ticket text into the repository (R4). Agent working files carry the same exposure today.
+- **A configured type's instructions reach every agent prompt.** `.han/config.md` is trusted as config. A project file
+  changed on a branch under review changes what a review of that branch is told, but only when that token is invoked.
+- **An agent that writes a file anyway.** An agent with a Write tool may write despite the prompt. The skill files the
+  returned message regardless, so the report still reads this run's output.
 - **The type-file contract is read by a model, not a parser.** A malformed file could be read loosely instead of
-  stopping. The Bats check catches structure; it cannot catch a misread value.
+  stopping. The Bats check catches structure in shipped files; configured files rely on Step 1's section check, which
+  cannot catch a misread value.
 - **Silent loss of security on focused runs** is accepted by the operator, and is listed here so a reviewer of the
   plan sees it.
 
 ## Deferred (YAGNI)
 
-- **More types (`data`, `resilience`, and others).** Reopen at the operator's planned refinement after the first build.
-- **User-defined types through configuration.** Not requested. Reopen when an operator asks, or edits a shipped type
-  file locally.
+- **More shipped types (`data`, `resilience`, and others).** Reopen at the operator's planned refinement after the
+  first build.
+- **An input slot for configured types**, like `work-ticket`'s ticket. No configured type has asked for one. Reopen
+  when a team's type needs an input beyond focus text.
 - **A type registry or index file.** It would duplicate the `## Review Types` table. Reopen if `SKILL.md` can no longer
-  link every type file.
+  link every shipped type file.
 - **Several named types in one invocation.** Parallel runs deliver this, and the default already combines types. Reopen
   when an operator records friction from launching runs separately.
-- **A configurable default type.** Not requested. Reopen on request.
+- **A configurable default set.** Not requested. Reopen on request.
 - **Scoping Steps 2, 5, and 6 by type.** Reopen when duplicate automated-check or doc findings across parallel typed
-  reports are reported as friction.
+  reports are reported as friction, or parallel Step 2 runs are seen to collide.
 - **Naming a fetch method per tracker.** The operator asked the skill to assume nothing about fetching. Reopen when
   operators ask for a named method with a second tracker in use.
+- **A `help` token that lists types.** The default announcement lists them. Reopen when operators ask how to discover
+  types.
+- **Cleaning up old run folders.** Reopen when operators ask for it.
 
 ## Cut for Scope
 
@@ -771,9 +1043,43 @@ and the CHANGELOG entry listing every Behavior Changes item.
 
 ## Open Items
 
+- **Whether filing agent output from the skill is a fix you accept** (blocking for Unit 1). S-31 and D-22 are pending
+  your decision.
 - **How the harness binds `arguments:`** (non-blocking). The grammar parses the raw string so the plan does not depend
   on it; a probe run during Unit 4 settles it.
 
 ## Review Findings
 
-Pending the Step 7 review round.
+One review round ran, with the junior developer (JD), the user-experience designer (UX), and the risk analyst (R).
+After merging findings that said the same thing, every finding was settled on the evidence or by the operator; none
+is left open apart from the Open Items above.
+
+| Finding | What it said | Resolution |
+| --- | --- | --- |
+| R1 | Three specialists cannot write the file their prompt names | Verified (C-23); D-22, pending the operator |
+| JD-001 | A pending marker needs a read before it can be overwritten | Marker dropped; D-22 files output from the skill |
+| JD-002, R2 | The ticket verdict says Resolved when nothing checked it | "Not verified" verdict and row-based rule (D-13); Requirement Map of every requirement (D-12) |
+| JD-003 | The PR outcome is not unchanged at former Large | Escalated; the operator kept the default and added a per-type override (D-8) |
+| JD-004 | `Required input` has one user and two homes | Section removed; ticket intake lives in Step 1.6 (D-3, D-11) |
+| JD-005 | Type tokens live in four places | The grammar refers to the table; Bats covers both hints (D-7, D-16) |
+| JD-006 | Bats category matching is not pinned | Pattern pinned (D-16) |
+| JD-007, UX-011, R7 | Run names can collide, and URL slugs are unsanitized | `--` separator and sanitizing rule (D-10) |
+| JD-008 | Extra agents on typed runs are undefined | Escalated; the operator chose per-type agents and configured types (D-20, D-21) |
+| JD-009 | Do member types' sections apply on the default run | No; the default run skips them (D-6) |
+| JD-010 | S-2 is a behavior change | Relabeled Changing (minor) |
+| JD-011, R4 | A general fetch tool widens every run | Escalated; the operator said to assume no fetch method (D-11) |
+| JD-012, R6 | Parallel runs share Step 2 | Added to Risks; scoping deferred |
+| JD-013 | `arguments: type` is unused | Line removed (D-7) |
+| JD-014, R9 | Value forms are inconsistent | Contract table uses one form per section (D-3) |
+| UX-001 to UX-003 | The announcement is late and hides a mistyped word | Moved to the end of Step 1, with purpose, focus, and the unmatched word (D-7) |
+| UX-004 | The type line does not reach the PR | Carried in the posted body (D-14) |
+| UX-005, UX-006 | A size word is stripped from real focus text | Dropped only alone or before a type token; grammar order pinned (D-19, D-7) |
+| UX-007 to UX-010 | Stop messages conflict and reject ticket IDs | One stop for a missing reference; any reference is tried; the failure message waits (D-7, D-11) |
+| UX-012, UX-013 | The run folder is invisible | Printed at Step 3.0 and named at Step 10 (D-10) |
+| UX-014 | Types are hard to discover | The default announcement lists them; a `help` token is deferred |
+| UX-015 | The manual-only text is unpinned | Pinned with agent names (S-25) |
+| UX-016, R5 | A Mode C path named like a type | Written `./name` (D-7) |
+| R3 | The ticket is written before the folder exists | Written at Step 3.0; a failed load leaves no folder (D-11) |
+| R8 | Behavior changes are accepted | Listed under Behavior Changes |
+| Unit 4/5 sequencing | Unit 4 named `work-ticket` before its file existed | `work-ticket` row, token, and clause moved to Unit 5 |
+| Unit 2 parse | The size note needs a parse Unit 4 adds | Unit 2 adds the `retired-size` clause |

@@ -8,7 +8,7 @@ Produced by this run's own discovery round on 2026-10-14. `han-core:structural-a
 `han-core/references/config-rule.md`, and the code-review sizing docs. `han-core:concurrency-analyst` was not dispatched:
 the area is Markdown instructions and one Bash script with no shared mutable state of its own (the parallel-run
 collision in C-13 is a file-naming fact, recorded from the behavioral round). Both agents' originating IDs are carried on
-each merged finding. The run's own sweep added C-20 to C-22.
+each merged finding. The run's own sweep added C-20 to C-22; C-23 and C-24 were added after the review round and the operator's scope addition.
 
 Abbreviations: `SK` = `han-coding/skills/code-review/SKILL.md`; `AD` =
 `han-coding/skills/code-review/references/agent-dispatch.md`.
@@ -398,6 +398,51 @@ Abbreviations: `SK` = `han-coding/skills/code-review/SKILL.md`; `AD` =
 - **Raised by:** S-19, run sweep
 - **Confidence:** Verified
 - **Bears on:** —
+
+### C-23: Extra agents and specialists without a Write tool have nowhere reliable to put their findings
+
+- **Claim:** Step 7.1 reads a fixed list of eleven output files and nothing else, so an agent added through `## Extra
+  Agents` is dispatched but its output file is never read. Separately, every per-agent prompt ends "Write your output
+  to {output_directory}/…", but `han-core:structural-analyst`, `han-core:behavioral-analyst`, and
+  `han-core:concurrency-analyst` have no Write tool in their definitions, so they cannot do what the prompt asks.
+  Whether their findings reach today's report depends on the orchestrator falling back to the returned message, which
+  no step says to do.
+- **Location:** `han-coding/skills/code-review/SKILL.md` Step 7.1; `han-coding/skills/code-review/references/agent-dispatch.md:159-213`;
+  `han-core/agents/structural-analyst.md`, `behavioral-analyst.md`, `concurrency-analyst.md` frontmatter `tools:`
+- **Evidence:**
+  ```
+  Read only the output files for agents that were actually dispatched in Step 3. Skip the read for any agent that was not
+  selected:
+  - `{output_directory}/test-plan.md` — han-core:test-engineer findings (T-series)
+  ...
+  - `{output_directory}/observability-analysis.md` — han-core:observability-engineer findings (OBS-series)
+  ```
+  ```
+  hazards, and integration-boundary assumptions that these changes introduce or break. Write your output to
+  ```
+- **Raised by:** risk-analyst review (R1), run sweep
+- **Confidence:** Verified for the file list and the tool lists; what happens to the findings in a live run is
+  Unverified, since nothing was executed.
+- **Bears on:** D-1, D-22
+
+### C-24: The config rule is one canonical file with twelve byte-identical copies, and a bad config never fails a run
+
+- **Claim:** `han-core/references/config-rule.md` defines the schema (three frontmatter keys and one `## Extra Agents`
+  section), path resolution, per-setting precedence, the extra-agents pool rule, and degradation. Thirteen copies exist
+  across the plugins, each byte-identical to the canonical one. The degradation rule says a bad config "can never fail a
+  skill run", with one stated exception: a missing `writing-voice` file asks the user instead. Five other skills read
+  `## Extra Agents` (automated-test-planning, architectural-analysis, design-an-api, investigate, research).
+- **Location:** `han-core/references/config-rule.md` (Schema, Precedence, Extra agents joining the pool, Degradation);
+  `*/references/config-rule.md` (13 files); `docs/configuration.md:75,138-167`
+- **Evidence:**
+  ```
+  A bad config can never fail a skill run; the worst it can do is be ignored. Show a one-line note only when content that
+  attempts a recognized override cannot be used; pass over everything else silently. A `writing-voice` value naming a
+  file that does not exist is the one exception
+  ```
+- **Raised by:** run sweep
+- **Confidence:** Verified
+- **Bears on:** D-20, D-21
 
 ## Findings No Agent Could Audit
 

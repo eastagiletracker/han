@@ -37,6 +37,21 @@ The three items are:
    other skills read it; whether code-review keeps reading it is in scope.
 3. The documentation: code-review's long-form doc and `docs/sizing.md`.
 
+### Added during the run
+
+Given the question of whether configured extra agents join a focused review, the operator answered:
+
+> allow the han config file to specify specific custom agents to be included in specific review types. additionally,
+> the config file must be able to specify new review types that can be used - for example, a financial institution may
+> want to add a "pii-check" review type, or a healthcare company may want to add a "hipaa-compliance" check. these are
+> not review types that will be included in Han, but can be built out by clients using Han
+
+This brings two more surfaces into the area:
+
+4. The `.han/config.md` schema: the canonical `han-core/references/config-rule.md`, its byte-identical vendored copies,
+   and `docs/configuration.md`, so the config can declare review types and attach agents to a type.
+5. Review types that live outside Han, written by the people who use it. Han ships none of them.
+
 ## Direction of Travel
 
 The size options for code review (`small | medium | large | dynamic`) are being replaced by review types. This is the
@@ -49,3 +64,4 @@ None received. This skill plans code structure; the visual-material convention d
 ## Record Provenance
 
 Established by `plan-a-change` on 2026-10-14. No prior record existed and no conflict was resolved.
+Amended on 2026-10-14 with the operator's answer above; it adds to the area and excludes nothing recorded earlier.
