@@ -8,7 +8,8 @@ description:
   code-overview for a written overview, or code-walkthrough to be paced through it one step at a time. Does not map
   bounded contexts or domain boundaries — use ddd-analysis for that. Does not capture feedback on Han''s own skills —
   use han-feedback for that.'
-argument-hint: "[focus areas, or file paths in Mode C]"
+argument-hint:
+  "[type: security | testing | architecture | observability | maintainability] [focus areas, or file paths in Mode C]"
 allowed-tools:
   Bash(git *), Bash(gh *), Bash(make *), Bash(npm *), Read, Write, Grep, Glob, Agent,
   Bash(bash "${CLAUDE_PLUGIN_ROOT}/scripts/han-config-dir.sh")
@@ -89,12 +90,93 @@ IDs are sequential within each category, starting at 001. Assign IDs in the orde
 **Category Assignment:** When an issue fits multiple categories, use the **first matching category** from the checklist
 order in [review-checklist.md](./references/review-checklist.md).
 
+## Review Types
+
+A review type names the one concern a run covers. Each shipped type is a data file under `references/types/`, and this
+table is the only list of shipped type tokens:
+
+| Token             | File                                                                         | Purpose                                                   |
+| ----------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `security`        | [references/types/security.md](./references/types/security.md)               | Whether the change opens an exploitable path              |
+| `testing`         | [references/types/testing.md](./references/types/testing.md)                 | Test coverage and edge cases of the change                |
+| `architecture`    | [references/types/architecture.md](./references/types/architecture.md)       | Module structure, dependency direction, runtime flow      |
+| `observability`   | [references/types/observability.md](./references/types/observability.md)     | Telemetry design and whether failures are visible         |
+| `maintainability` | [references/types/maintainability.md](./references/types/maintainability.md) | Clarity, naming, and fit with the project's own standards |
+
+```
+Default (no type token): security, testing, architecture, observability, maintainability
+Default always-run agents: han-core:junior-developer, han-core:adversarial-security-analyst
+Every other agent in the default set's rosters: dispatched only when its roster signal fires
+Also on the default run, under the same signal rule: ## Extra Agents
+```
+
+**The default run** is one run with one report. Its roster is the union of the default set's rosters under the rule
+above, and its manual pass covers the union of their checklist categories. It applies none of the member types'
+`## Severity`, `## Instructions`, or `## Report section`: it always uses the default severity rule and adds no type
+section.
+
+**A typed run's output never names or recommends another review type.** Only the default run's announcement lists the
+available types.
+
+### The type-file contract
+
+Every type file has a `# Review type: {token}` title and these six `##` sections, in this order. A section with nothing
+to say holds the literal word `none`, except `## Severity`, which holds `default`.
+
+| Section                   | Value form                                                                                               | Read at        |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- | -------------- |
+| `## Purpose`              | one sentence                                                                                             | Steps 1, 8, 10 |
+| `## Roster`               | `- Always:` comma-separated agents; `- When relevant:` comma-separated agents, or `none`                 | Step 3.2       |
+| `## Checklist categories` | comma-separated names exactly as they are bolded in `review-checklist.md`, or `none`                     | Step 4         |
+| `## Severity`             | `default`, or text replacing both lines of the Step 3.3 severity slot                                    | Steps 3.3, 4   |
+| `## Instructions`         | `none`, or one blockquote appended to every agent prompt after the binding blocks, and applied to Step 4 | Steps 3.5, 4   |
+| `## Report section`       | `none`, or one fenced section layout followed by the rules for filling it                                | Step 8         |
+
+A `## Severity` text replaces both lines of the slot, so it must say which severities are reported and which way an
+uncertain finding goes. The YAGNI pass in Step 4 always runs, whatever `## Checklist categories` says.
+
 ## Step 1: Identify Changes
 
 Resolve project config: read CLAUDE.md's `## Project Discovery` section for docs, ADR, and coding-standards directories
 plus test, lint, and build commands (look under `### Commands and Tests`, not `### Frameworks and Tooling`); fall back
 to project-discovery.md; fall back to Glob defaults (`docs/`, `docs/adr/`, `docs/coding-standards/`). Store found values
 for use in Steps 2, 5, and 6. Continue without any keys that remain unfound.
+
+### Parse the argument string
+
+Parse the raw argument string from the invocation by this grammar. Do not rely on any harness argument binding.
+
+```
+args         := [ retired-size ] [ type-clause ] [ rest ]
+retired-size := "small" | "medium" | "large" | "dynamic"
+                (recognized only as the first token, and only when it is the whole string or the next token is a type token)
+type-clause  := type-token
+type-token   := a Token from the ## Review Types table
+rest         := the remaining string, verbatim → $focus_areas ("none provided" when empty);
+                in Mode C, tokens in rest that resolve as paths or globs also build the file list
+matching     := tokens split on whitespace and compare case-insensitively; a quoted first token is never a type token
+default      := a first token of "default" selects the default run explicitly and is removed from the focus text
+```
+
+- **A retired size word** is dropped with the note `Size options were removed from code review; "{word}" was ignored.`
+  Anywhere else it stays in the focus text, so "large file uploads" keeps its first word.
+- **A first token that is not a type token** stays in the focus text, and the run is the default run.
+- **A Mode C path named like a type** is written `./testing` to be read as a path.
+
+**Bind `$focus_areas`** to `rest`, verbatim, or to the literal string `none provided` when it is empty. This binding is
+consumed by every Step 3.5 agent prompt and by the Step 4 manual review.
+
+| Invocation                                   | Review                          | `$focus_areas`                                  |
+| -------------------------------------------- | ------------------------------- | ----------------------------------------------- |
+| `/code-review`                               | default set                     | `none provided`                                 |
+| `/code-review testing focus on retries`      | `testing`                       | `focus on retries`                              |
+| `/code-review auth endpoints`                | default set                     | `auth endpoints`                                |
+| `/code-review default auth endpoints`        | default set                     | `auth endpoints`                                |
+| `/code-review large`                         | default set, plus the size note | `none provided`                                 |
+| `/code-review large testing`                 | `testing`, plus the size note   | `none provided`                                 |
+| `/code-review large file uploads`            | default set                     | `large file uploads`                            |
+| `/code-review testing src/retry.ts` (Mode C) | `testing`                       | `src/retry.ts`, which also builds the file list |
+| `/code-review ./testing` (Mode C)            | default set                     | `./testing`, which also builds the file list    |
 
 ### Detect review context
 
@@ -124,21 +206,41 @@ Use the script output to determine the review mode. If the script reports `git-a
 
 **Mode C: No git / no changes found**
 
-- If the user provided file paths, glob patterns, or directories as arguments, use those to build the file list (expand
-  with Glob)
-- If no arguments provided, use Glob to discover source files in the current directory, excluding: `node_modules/`,
+- If tokens in `$focus_areas` resolve as file paths, glob patterns, or directories, use those to build the file list
+  (expand with Glob)
+- If none do, use Glob to discover source files in the current directory, excluding: `node_modules/`,
   `.git/`, `vendor/`, `dist/`, `build/`, `__pycache__/`, `*.min.js`, `*.min.css`, lock files
 - Present the discovered files and ask the user to confirm the review scope
 - Note: In Mode C, review files by reading them in full rather than comparing against a diff (no diff is available)
 
-**Parse the argument string.** Read the raw argument string from the invocation. When it is exactly one of `small`,
-`medium`, `large`, or `dynamic` (compared case-insensitively), drop it and print
-`Size options were removed from code review; "{word}" was ignored.` Any other string, including one that only starts
-with one of those words (such as "large file uploads"), is kept whole.
+### Resolve the review type
 
-**Bind `$focus_areas`.** Bind `$focus_areas` to what remains of the argument string, verbatim. If empty, bind
-`$focus_areas` to the literal string `none provided`. This binding is consumed by every Step 3.5 agent prompt and by the
-Step 4 manual review.
+Once the review mode is known, read the type file for the type the parse selected, and check it against the type-file
+contract in `## Review Types`:
+
+- **A missing section** stops the run before Step 2, with nothing dispatched and no report written:
+  `Review type file {path} is missing section "{name}". No review ran.`
+- **A checklist category** that [review-checklist.md](./references/review-checklist.md) does not bold is skipped with
+  the one-line note `Review type {token}: checklist category "{name}" does not exist and was skipped.`
+
+The default run reads the five default-set type files for their rosters and checklist categories only.
+
+**Announce the review type**, as the last thing Step 1 does and before Step 2 runs anything:
+
+```
+Review type: {token}: {Purpose}
+Focus: {$focus_areas}
+```
+
+or, with no type token:
+
+```
+Review type: default (no type given{; "{first word}" is not a review type, so it is read as focus text})
+Available types: {every shipped token}
+Focus: {$focus_areas}
+```
+
+Include the parenthetical's second clause only when a first word was kept as focus text.
 
 ## Step 1.5: Load Branch Context
 
@@ -189,7 +291,7 @@ that check.
 Run each command **one at a time, sequentially**, scoped to changed areas when possible. Record each failure (command +
 relevant error output) as a **CRIT** item with category **[Automated Check]**, then continue to the next command.
 
-## Step 3: Dispatch Review Agents
+## Step 3: Resolve the Review Type and Dispatch Review Agents
 
 Agents analyze source code to identify coverage gaps, edge cases, security vulnerabilities, structural problems,
 runtime-behavior risks, concurrency hazards, and clarity issues — they do not execute tests. (The test command gate
@@ -220,12 +322,14 @@ Name the run before anything is dispatched, so every agent's output is filed in 
 
 Then sanitize it: lowercase it, replace each run of characters outside `[a-z0-9]` with one `-`, and trim `-` from both
 ends. An empty result becomes `review`. A sanitized slug never contains `--`, and no query string, `#`, `/`, or `..`
-reaches a file name.
+reaches a file name. Because a slug never contains `--`, the default run of branch `feat-retry-testing` and a
+`testing` run of branch `feat-retry` cannot share a name.
 
 **Name the run and its folder:**
 
 ```
-{run_name}      = code-review-{slug}
+{run_name}      = code-review-{slug}              (default run)
+                = code-review-{slug}--{type}      (typed run)
 {run_directory} = {report_directory}/{run_name}/
 agent file      = {run_directory}/{Output file from the roster table}
 report          = {report_directory}/{run_name}.md
@@ -234,22 +338,23 @@ report          = {report_directory}/{run_name}.md
 Print `Run folder: {run_directory}`. A rerun of the same run reuses its folder; Step 3.5 records each agent's source in
 this run, so the rerun never reads the earlier run's files.
 
-### Step 3.1: Summarize the change
+### Step 3.1: Confirm the review type
 
-Count the files on the Step 1 file list as `{N}`, and draft a one-line summary of what the change does. Both are reused
-in the Step 3.3 calibration directive.
+Carry forward the review type Step 1 resolved and announced: its token (`default` for the default run) and its type
+file, or the five default-set type files for the default run. Count the files on the Step 1 file list as `{N}`, and
+draft a one-line summary of what the change does. All three are reused in the Step 3.3 calibration directive.
 
 ### Steps 3.2 to 3.5: Select, scope, and dispatch agents
 
 These four sub-steps are specified in [agent-dispatch.md](./references/agent-dispatch.md), and every reference to
 Step 3.2, 3.3, 3.4, or 3.5 elsewhere in this skill points there. It carries the roster table (each agent's signal,
-file-list slice, output file, and finding-ID series), the minimum roster dispatched on every review (3.2), the
+file-list slice, output file, and finding-ID series), how the roster is built from the review type (3.2), the
 brief-scoping rules including the authoritative severity rule (3.3), the domain-scoped file lists (3.4), the
 two named-binding blocks, the exact prompt for each agent, and how each agent's returned output is filed (3.5), and
 **manual-only mode**: the mode a run enters when the dispatch mechanism itself fails at
 3.5, with its detection rule, the absent-coverage list selection leaves behind, and the by-hand sweep that substitutes.
 
-Select from the roster table, scope each brief to the change, and dispatch every selected agent in a
+Select the roster from the review type, scope each brief to the change, and dispatch every selected agent in a
 single message so they run in parallel. If dispatch fails, enter manual-only mode as that file specifies.
 
 Continue to Step 4 immediately. Results will be collected in Step 7.
@@ -266,9 +371,14 @@ Review each file from the Step 1 file list **in alphabetical order**. For each f
 4. **Examine the diff** to understand what changed. If no diff is available (Mode B uncommitted review or Mode C non-git
    review from Step 1), skip this sub-step — the full file read from sub-step 3 provides all necessary context. Apply
    the review checklist to the entire file content.
-5. **Apply the review checklist** at [review-checklist.md](./references/review-checklist.md). Its YAGNI pass and its
-   Gate 1 evidence test are defined in [../../references/yagni-rule.md](../../references/yagni-rule.md); read that
-   file from here rather than following the checklist's own link to it.
+5. **Apply the review checklist** at [review-checklist.md](./references/review-checklist.md), limited to the
+   categories in the type file's `## Checklist categories` (the union of the default set's categories on the default
+   run). Always run its YAGNI pass, whatever the type's categories say. The YAGNI pass and its Gate 1 evidence test are
+   defined in [../../references/yagni-rule.md](../../references/yagni-rule.md); read that file from here rather than
+   following the checklist's own link to it.
+
+**The review type shapes this pass too.** When the type file's `## Instructions` is not `none`, apply them here as the
+agents do. Manual findings follow the severity slot Step 3.3 filled for this run.
 
 If the user provided focus areas in their arguments (the `$focus_areas` binding from Step 1), apply extra scrutiny to
 those areas and include additional detail in findings for matching categories.
@@ -399,6 +509,10 @@ Before writing the output, invoke `han-communication:readability-guidance` to su
 then invoke `han-communication:explanation-guidance` to surface Han's standard for explaining technical work to a reader
 who will not implement it. Both run inline and hand control straight back; continue with this step as soon as they
 return. Draft the finding prose and narrative against both.
+
+**The report names its review type** in one header line: `**Review type:** {token}: {Purpose}` for a typed run, or
+`**Review type:** default` for the default run. It names only this run's own type and never names or recommends
+another.
 
 **Every CRIT, WARN, SUGG, and SEC finding opens with a plain-language explanation** written for the reader who will not
 open the file: what they could observe going wrong, what has to be true for it to happen, and how likely that is. Apply

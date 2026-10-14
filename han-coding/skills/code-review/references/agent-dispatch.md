@@ -37,14 +37,14 @@ name, and Step 7.1 and the verification check read this table rather than listin
 
 ### Step 3.2: Select agents
 
-**Always dispatch — minimum roster on every review:**
+Build the roster from the review type Step 3.1 confirmed. This step carries no always-dispatch list of its own; the
+type files and SKILL.md's `## Review Types` section say which agents run.
 
-1. `han-core:junior-developer` — generalist clarity and standards check, applicable to any change.
-2. `han-core:adversarial-security-analyst` — security findings have a non-negotiable evidence standard that already
-   prevents theoretical reports; the agent stays silent when the standard is not met.
-
-**Conditionally dispatch the rest based on the Signal column of the roster table.** Skip any agent whose signal does
-not appear in the file list.
+- **A typed run.** Every agent on the type file's `- Always:` line, plus every agent on its `- When relevant:` line
+  whose roster-table signal appears in the file list.
+- **The default run.** The union of the agents named in the default set's type files, under the default rule in
+  SKILL.md's `## Review Types` section: the default always-run agents always run, and every other agent runs only when
+  its roster-table signal appears in the file list.
 
 **Selection rules:**
 
@@ -54,7 +54,7 @@ not appear in the file list.
   [../../references/config-rule.md](../../../references/config-rule.md): include one only when a signal in the file list
   matches its stated specialty, justify the inclusion in one line, and skip an entry that does not resolve to a
   dispatchable agent with a one-line note.
-- For each conditional agent included, justify in one line — name the file or signal that triggered inclusion.
+- For each agent included by its signal, justify in one line — name the file or signal that triggered inclusion.
 - Fewer is better. If a signal is borderline, **skip** the agent rather than include it. A small change that nominally
   touches a query but is not modifying its behavior does not require `han-core:data-engineer`.
 
@@ -70,7 +70,7 @@ rubric pass for agent findings, the rubric in `references/agent-finding-classifi
 Every dispatched agent receives — alongside its domain-specific prompt — the following calibration directive verbatim.
 Manual findings from Steps 4 to 6 follow the same directive, so manual and agent findings share one severity rule.
 
-> **Calibrate findings to the change being reviewed.** This is a review of a change touching {N} files. The change does
+> **Calibrate findings to the change being reviewed.** This is a **{type}** review of a change touching {N} files. The change does
 > the following: {one-line summary from Step 3.1}.
 >
 > Raise a finding only when **at least one** of these holds:
@@ -102,6 +102,10 @@ Manual findings from Steps 4 to 6 follow the same directive, so manual and agent
 > requests it. Each finding's body must name (a) the failing evidence type, (b) the matched anti-pattern, and (c) the
 > simpler form considered.
 
+`{type}` is the run's type token, or `default`. The two lines that start `Severity:` are the **severity slot**. When the
+run's type file holds text under `## Severity` rather than `default`, put that text in place of both lines. The default
+run always uses the two lines shown.
+
 ### Step 3.4: Domain-scoped file lists
 
 Pass each agent only the slice of the file list in its roster-table row's File-list slice column.
@@ -124,6 +128,9 @@ calibration directive and before the domain-specific instructions:
 > Findings in the focus area receive extra scrutiny and additional detail. Findings outside the focus area must still
 > satisfy the calibration directive above; do not raise minor findings outside the focus area when a focus area is
 > provided.
+
+**The review type's instructions.** When the run's type file holds a blockquote under `## Instructions` rather than
+`none`, append it to every prompt after the two binding blocks above, verbatim. The default run appends none.
 
 Substitute the values of `$focus_areas` (bound at Step 1) and `$branch_context` (bound at Step 1.5) literally. Do not
 paraphrase or summarize either binding inside the prompt. `$focus_areas` is the user's own instruction and is trusted;
@@ -241,7 +248,7 @@ branch diff can be manual-only.
 1. The `Agent` tool is unavailable to the run (not in the session's allowed tools, or absent from the tool list).
 2. A dispatch call is made and denied (a permission refusal, or a tool error saying the call could not be placed).
 
-**An agent that returns with nothing to say is not a trigger.** The always-dispatched security agent is specified to
+**An agent that returns with nothing to say is not a trigger.** The security agent is specified to
 stay silent when its evidence standard is not met, so an empty result is a run that ran and passed. Reading silence as
 failure would print a disclosure saying security coverage was absent on a run where it was present. A false disclosure
 is worse than the silent gap this mode exists to name. Do not probe for availability before dispatching; the attempt is
@@ -249,7 +256,7 @@ the detection.
 
 **What selection produces in this mode.** Step 3.2 has already run by the time detection fires, so the roster it
 selected is a fact, not a counterfactual. Keep that roster as the **absent-coverage list**: every agent Step 3.2
-selected (the two always-dispatched agents, every conditional agent whose signal fired, and any extra agent from a
+selected (every agent the type always runs, every agent whose signal fired, and any extra agent from a
 project config that was included), plus the independent validation pass at Step 7.4, which dispatches an agent and so
 cannot run either. That list is what the Review Coverage block in `template.md` renders, one row per item.
 

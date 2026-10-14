@@ -1,5 +1,7 @@
 # Code Review: {PR title, branch name, or directory name}
 
+**Review type:** {token}: {Purpose from the type file} <!-- or, on the default run: **Review type:** default -->
+
 <!--
 LAZY SECTIONS: render a section ONLY when it has content. Do not emit a heading
 followed by empty-state placeholder text. The Review Summary table and the Review
