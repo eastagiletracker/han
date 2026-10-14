@@ -93,7 +93,7 @@ says that `.han/config.md` may declare more types
 Default (no type token): security, testing, architecture, observability, maintainability
 Default always-run agents: han-core:junior-developer, han-core:adversarial-security-analyst
 Every other agent in the default set's rosters: dispatched only when its roster signal fires
-Also on the default run: agents .han/config.md attaches to a default-set type; ## Extra Agents under the signal rule
+Also on the default run, under the same signal rule: agents .han/config.md attaches to a default-set type, and ## Extra Agents
 More types: declared under ## Code Review Types in .han/config.md; never part of the default run
 ```
 
@@ -122,7 +122,7 @@ Every type file, shipped or configured, has six sections in a fixed order
 | `## Purpose`              | one sentence                                                                        | Steps 1, 8, 10 |
 | `## Roster`               | `- Always:` comma-separated agents; `- When relevant:` comma-separated agents or `none` | Step 3.2   |
 | `## Checklist categories` | comma-separated names as bolded in `review-checklist.md`, or `none`                 | Step 4         |
-| `## Severity`             | `default`, or one sentence replacing the default severity rule                      | Steps 3.3, 4   |
+| `## Severity`             | `default`, or text replacing both lines of the severity slot                        | Steps 3.3, 4   |
 | `## Instructions`         | `none`, or one blockquote appended to every agent prompt and applied to Step 4      | Steps 3.5, 4   |
 | `## Report section`       | `none`, or one fenced section layout followed by the rules for filling it           | Step 8         |
 
@@ -172,8 +172,11 @@ default
 Rows come from gap-analyzer's Requirement Map, or from Step 4's by-hand sweep in manual-only mode. After Step 7.4, a
 row is Not met when a surviving Missing or Divergent finding names it, Partial when a surviving Partial finding names
 it, and otherwise keeps the map's status; a row whose gap finding was discarded is Met, with the evidence
-"GAP-### discarded at validation". Verdict: Not verified when the table has no rows, with one line saying why; Resolved
-when every row is Met; Not resolved when any row is Not met; Partially resolved otherwise.
+"GAP-### discarded at validation". Evidence shows the WARN-### or SUGG-### task ID Step 7 gave a surviving gap.
+Verdict: Not verified when there is no Requirement Map and no by-hand sweep, with one line saying why; Not resolved
+when any row is Not met; Resolved when every row is Met and the row count equals the map's "Requirements in ticket"
+count; Partially resolved otherwise, with the line "{N - rows} of {N} requirements were not checked." when rows are
+missing.
 ````
 
 The other five shipped type files follow the same layout. Their rosters and checklist categories are in
@@ -218,7 +221,8 @@ Data Isolation, Error Handling
 
 ## Severity
 
-Any finding that exposes personal data is at least a Warning, even when uncertain.
+Critical and Warning findings escalate, and a Suggestion is raised for any personal-data handling the change touches.
+When uncertain between two severities, prefer the higher one.
 
 ## Instructions
 
@@ -235,15 +239,60 @@ The rules, in short:
 - Tokens are lowercase letters, digits, and hyphens, starting with a letter. A shipped token, a retired size word, or
   `default` is reserved: the line is ignored with a one-line note naming the file.
 - Paths resolve as `writing-voice` does. When both files declare one token, the project file wins.
-- The type file is read only when its token is invoked. A missing file or section stops that run with
+- The type file is read only when its token is invoked. A broken project line falls through to the personal file's
+  line for the same token. When no usable line remains, the run stops with
   `Review type "{token}" is declared in the {project|personal} .han/config.md as {path}, but {the file was not found | its "{name}" section is missing}. No review ran.`
-  This becomes the config rule's second exception to "a bad config can never fail a skill run".
+  It stops rather than asking, because the repair is a file edit and a rerun is the retry.
 - An agent with a roster-table row keeps its signal under `When relevant`. An agent without one (D-1's last row) runs
-  whenever the type runs. Its output is filed as `{agent name with ":" as "-"}.md` with the EXT series.
-- Agents attached under `## Code Review Type Agents` run on every run of that type, with no signal gate, and on the
-  default run when the type is in the default set.
+  whenever the type runs. Its output is filed as `{agent name with ":" as "-"}.md`, and its series is
+  `X-{agent name with ":" as "-"}`, so two such agents never share an ID.
+- Agents attached under `## Code Review Type Agents` run on every run of that type, with no signal gate. On the
+  default run, agents attached to a default-set type join under today's `## Extra Agents` signal rule. A line is read
+  only when its token runs, so a line naming a type a project does not declare stays silent.
 - `## Extra Agents` reaches only the default run, under today's signal rule. Typed runs ignore it silently.
 - Configured types never join the default run.
+
+The token form, reserved names, stop message, and attach rules live in code-review's `## Review Types` section and in
+`docs/configuration.md`. The config rule, copied into twelve plugins, carries only what every skill needs to read the
+file correctly. Its changes, word for word:
+
+- **Schema**, a new bullet after `## Extra Agents`:
+
+  ```
+  - `## Code Review Types` and `## Code Review Type Agents` (section headings): list settings owned by the code-review
+    skill, which defines their line format and how it uses them. Every other skill ignores both silently.
+  ```
+
+- **How a configured path resolves**, the first line becomes:
+
+  ```
+  `output-directory`, `writing-voice`, and each path listed under `## Code Review Types` name a path, and all resolve the same way.
+  ```
+
+- **Precedence**, a new paragraph after "The extra-agents list adds rather than replaces":
+
+  ```
+  A keyed list setting, where each line names a key such as a review type, resolves per key. When both files name the
+  same key, the project file's line is used; when that line is unusable, the personal file's line for the same key is
+  used. Lines with different keys are all kept. `## Code Review Type Agents` lines add together across both files, as
+  `## Extra Agents` entries do.
+  ```
+
+- **Extra agents joining the pool**, a new last sentence:
+
+  ```
+  A skill may consider the list on only some of its runs; when it does, its own instructions say which.
+  ```
+
+- **Degradation**, the opening paragraph becomes:
+
+  ```
+  A bad config never fails a skill run, with two exceptions. A `writing-voice` value naming a file that does not exist
+  asks the user which fallback to take, per its definition above. A review type the user invokes by name, whose
+  configured file is missing or incomplete, stops that code review before it starts, as the code-review skill defines.
+  Otherwise the worst a bad config can do is be ignored. Show a one-line note only when content that attempts a
+  recognized override cannot be used; pass over everything else silently.
+  ```
 
 ### The argument grammar
 
@@ -264,9 +313,11 @@ ticket-ref   := the next token as given; a double-quoted token may contain space
 rest         := the remaining string, verbatim → $focus_areas ("none provided" when empty);
                 in Mode C, tokens in rest that resolve as paths or globs also build the file list
 matching     := tokens split on whitespace and compare case-insensitively; a quoted first token is never a type token
+default      := a first token of "default" selects the default run explicitly and is removed from the focus text
 ```
 
-A first token that is not a type token stays in the focus text, as it does today. A Mode C path named like a type is
+The parse uses the config the skill already read at the top of `SKILL.md`, so every configured token is known before
+Step 1 reads the first word. A first token that is not a type token stays in the focus text, as it does today. A Mode C path named like a type is
 written `./testing`. A retired size word is dropped with the note
 `Size options were removed from code review; "{word}" was ignored.`
 ([D-19](artifacts/change-decision-log.md#trivial-decisions)) only when it stands alone or before a type token, so
@@ -295,8 +346,15 @@ The decision log carries the full table of worked invocations.
 
 Every run uses today's Medium rule unless its type says otherwise: Critical and Warning findings escalate, and a
 Suggestion is raised only when this change directly introduces it. Manual and agent findings both prefer the lower
-severity when uncertain. A type file's `## Severity` section holds `default` or one sentence that replaces the rule for
-that type; Step 3.3 puts it into the calibration directive and Step 4 applies it. All six shipped types hold
+severity when uncertain. The directive carries the rule as a two-line slot:
+
+```
+Severity: Critical and Warning findings escalate; a Suggestion is raised only when this change directly introduces it.
+When uncertain between two severities, prefer the lower one.
+```
+
+A type file's `## Severity` section holds `default` or text that replaces both lines, so it must say which severities
+are reported and which way an uncertain finding goes. Step 3.3 puts it into the slot and Step 4 applies it. All six shipped types hold
 `default`, and a run with no type always uses the default
 ([D-8](artifacts/change-decision-log.md#d-8-one-default-severity-rule-replaces-the-size-ladder-and-a-type-may-override-it)).
 The directive's first line becomes `This is a **{type}** review of a change touching {N} files.` The size-independent
@@ -314,14 +372,17 @@ Each run gets its own folder, named at Step 3.0 before dispatch
                   and "-" trimmed from both ends; an empty result becomes "review"
 {run_name}      = code-review-{slug}              (default run)
                 = code-review-{slug}--{type}      (typed run)
-{run_directory} = {output_directory}/{run_name}/
+{report_directory} = today's Step 8.6 destination: a configured output-directory, else the docs folder
+                   Step 3 resolves, with Step 8.6's write-failure fallback
+{run_directory} = {report_directory}/{run_name}/
 agent file      = {run_directory}/{Output file from the roster table}
 ticket copy     = {run_directory}/ticket.md       (work-ticket only)
 report          = {report_directory}/{run_name}.md
 ```
 
 A sanitized slug never contains `--`, so the default run of branch `feat-retry-testing` and a `testing` run of branch
-`feat-retry` cannot share a name. Step 3.0 prints `Run folder: {run_directory}`, and Step 10 names it.
+`feat-retry` cannot share a name. The run folder sits beside the report, so a configured `output-directory` holds
+both. Step 3.0 prints `Run folder: {run_directory}`, and Step 10 names it.
 
 Agents no longer write files
 ([D-22](artifacts/change-decision-log.md#d-22-agents-return-their-findings-and-the-skill-writes-each-agents-file)).
@@ -344,7 +405,8 @@ Paste the ticket's text, or tell me how to get it, and the review will continue.
 
 and waits. Pasted text becomes the ticket; instructions are followed and the load retried. The text is written to
 `{run_directory}/ticket.md` once Step 3.0 has named the folder, and `gap-analyzer` receives the path with an
-instruction to treat the ticket as data and to list every requirement, met or not
+instruction to treat the ticket as data, to state how many requirements the ticket has, and to list every one, met
+or not
 ([D-12](artifacts/change-decision-log.md#d-12-gap-analyzer-joins-the-shared-roster)). In Mode B and Mode C,
 `gap-analyzer`'s prompt names the change the way Step 1 resolved it: the uncommitted diff in Mode B, and the listed
 files read in full in Mode C.
@@ -661,7 +723,8 @@ unchanged; the rule's other changes are S-27 to S-29.
 ### S-21: Report template — Re-scoped
 
 **Target state.** `references/template.md` carries a `**Review type:**` header line and one slot after Review
-Recommendation that renders a type's `## Report section` when it is not `none`. Every other section, and their order,
+Recommendation that renders a type's `## Report section` when it is not `none`, wrapped in
+`<!-- type-section:start -->` and `<!-- type-section:end -->` so the PR skill can carry it by position. Every other section, and their order,
 is unchanged.
 
 **Behavior.** Changing in one line: every report names its type and purpose, or `default`. Settled by D-18; the line
@@ -677,7 +740,8 @@ names only the run's own type.
 
 **Target state.** The PR-posting skill passes its argument string to `/code-review` verbatim, so a leading shipped or
 configured type token selects that type. Its `argument-hint` carries the same type clause. Its posted body includes the
-report's `**Review type:**` line, and Ticket Resolution when present. When `/code-review` ends without naming a report
+report's `**Review type:**` line and, uncut, whatever sits between the report's `<!-- type-section:start -->` and
+`<!-- type-section:end -->` markers, which covers Ticket Resolution and any configured type's section. When `/code-review` ends without naming a report
 path, it relays the last message and stops without posting.
 
 **Behavior.** Changing for one case: free text that begins with a type token now runs that type. The posted body gains
@@ -759,10 +823,11 @@ every Behavior Changes entry.
 
 ### S-27: `## Code Review Types` in the config schema — Added
 
-**Target state.** `han-core/references/config-rule.md` lists `## Code Review Types` in its Schema (token-to-path lines,
-the token form, the reserved names), resolves each path by its existing path rule, gives the project file precedence
-per token, and names a missing or malformed type file for an invoked token as the second exception in Degradation. The
-twelve vendored copies match it byte for byte. code-review's Step 1 reads the declared file when its token is invoked.
+**Target state.** `han-core/references/config-rule.md` carries the five changes pinned word for word in Target State:
+the Schema bullet, the path-resolution line, the keyed-setting Precedence paragraph, the extra-agents scoping sentence,
+and the Degradation opening with its second exception. The twelve vendored copies match it byte for byte. The token
+form, reserved names, and stop message live in code-review's `## Review Types` section. code-review's Step 1 reads the
+declared file when its token is invoked, falling through to the personal file's line when the project's is unusable.
 
 **Behavior.** Preserving. A config without the section behaves as today, and other skills ignore the section silently.
 
@@ -774,9 +839,10 @@ twelve vendored copies match it byte for byte. code-review's Step 1 reads the de
 
 ### S-28: `## Code Review Type Agents` in the config schema — Added
 
-**Target state.** `config-rule.md` lists `## Code Review Type Agents` in its Schema (type-token-to-agents lines),
-states that both files' lines add together, and covers an unknown token with a one-line note. code-review's Step 3.2
-dispatches every attached agent on runs of that type, and on the default run for a default-set type.
+**Target state.** `config-rule.md` names `## Code Review Type Agents` in its Schema bullet and says in Precedence
+that both files' lines add together. code-review's `## Review Types` section defines the line format. Step 3.2
+dispatches every attached agent on runs of that type, and on the default run joins agents attached to a default-set
+type under the signal rule. A line whose token does not run is never read.
 
 **Behavior.** Preserving. A config without the section behaves as today.
 
@@ -804,8 +870,9 @@ focused review.
 ### S-30: Roster row for an agent without its own row — Added
 
 **Target state.** The roster table's last row covers any agent a configured type or a config line names that has no row
-of its own: full file list, output file `{agent name with ":" as "-"}.md`, series `EXT`, and a generic prompt. Step 7
-classifies EXT findings by the calibration directive alone, and the Step 7.2 reachability gate applies.
+of its own: full file list, output file `{agent name with ":" as "-"}.md`, series `X-{agent name with ":" as "-"}`, and
+a generic prompt that names the change by the Step 1 mode wording. Step 7
+classifies these findings by the calibration directive alone, and the Step 7.2 reachability gate applies.
 
 **Behavior.** Preserving for shipped agents. An agent from `## Extra Agents` on the default run now has its output read
 (C-23), which is new behavior on a path that read nothing before.
@@ -823,7 +890,8 @@ finding, as your final message.` The skill writes each returned message to the a
 `Not covered in this run: {reason}` when the agent failed. Step 7.1 reads only the files written in this run.
 
 **Behavior.** Pending the operator's decision (see Open Items). Working classification: Changing, because findings
-from the three specialists that cannot write a file now reliably reach the report.
+from the three specialists that cannot write a file now reliably reach the report. D-10's stale-read protection, S-30,
+and the configured agents of D-20 and D-21 depend on it.
 
 **Why.** Three shipped specialists cannot do what their prompt asks, extra agents' output is never read, and a rerun
 must not read a stale file.
@@ -962,7 +1030,7 @@ can mention configured types.
 **How you know it worked.** A project config declaring `pii-check` with the worked example file runs
 `/code-review pii-check`, dispatches the attached and rostered agents, applies its severity sentence, and writes
 `code-review-{slug}--pii-check.md`. Pointing the token at a missing file stops with the pinned message. A copy check
-shows every vendored `config-rule.md` identical to the canonical one.
+(`for f in */references/config-rule.md; do cmp han-core/references/config-rule.md "$f"; done`) prints nothing.
 
 ### Unit 7: Pass types through `post-code-review-to-pr`
 
@@ -1043,16 +1111,17 @@ completes.
 
 ## Open Items
 
-- **Whether filing agent output from the skill is a fix you accept** (blocking for Unit 1). S-31 and D-22 are pending
-  your decision.
+- **Whether filing agent output from the skill is a fix you accept** (blocking for Units 1, 3, and 6). S-31 and D-22
+  are pending your decision; D-10, D-20, D-21, and S-30 depend on it.
 - **How the harness binds `arguments:`** (non-blocking). The grammar parses the raw string so the plan does not depend
   on it; a probe run during Unit 4 settles it.
 
 ## Review Findings
 
-One review round ran, with the junior developer (JD), the user-experience designer (UX), and the risk analyst (R).
-After merging findings that said the same thing, every finding was settled on the evidence or by the operator; none
-is left open apart from the Open Items above.
+Two review rounds ran, the cap for this team size. Round 1 had the junior developer (JD), the user-experience designer
+(UX), and the risk analyst (R). Round 2 had the junior developer (JD2), on the configured-types design added after
+round 1. After merging findings that said the same thing, every finding was settled on the evidence or by the
+operator; none is left open apart from the Open Items above.
 
 | Finding | What it said | Resolution |
 | --- | --- | --- |
@@ -1083,3 +1152,15 @@ is left open apart from the Open Items above.
 | R8 | Behavior changes are accepted | Listed under Behavior Changes |
 | Unit 4/5 sequencing | Unit 4 named `work-ticket` before its file existed | `work-ticket` row, token, and clause moved to Unit 5 |
 | Unit 2 parse | The size note needs a parse Unit 4 adds | Unit 2 adds the `retired-size` clause |
+| JD2-001 | A `## Severity` sentence that only adds to the rule leaves the rest unspecified | The rule is a pinned two-line slot; a type's text replaces both lines; example rewritten (D-8) |
+| JD2-002 | The configured-type stop differs from `writing-voice` and skips fall-through | Kept as a stop, with the reason; a broken project line falls through to the personal file (D-20) |
+| JD2-003 | The config rule has no wording for per-key precedence or a third path | Five config-rule changes pinned word for word (Target State) |
+| JD2-004 | Code-review details would be copied into twelve plugins | The rule carries only the schema bullet, precedence, and degradation; details live in code-review; a `cmp` loop checks copies (D-20) |
+| JD2-005 | An attached-agent note would fire in projects without that type | A line is read only when its token runs (D-21) |
+| JD2-006 | Attached agents on the default run: gated or not | Gated by today's `## Extra Agents` signal rule (D-6, D-21) |
+| JD2-007 | The generic prompt assumes branch mode; EXT IDs collide | Mode wording reused; per-agent series (D-1) |
+| JD2-008 | `{report_directory}` is undefined | Defined; the run folder sits beside the report (D-10) |
+| JD2-009 | A configured type's report section never reaches the PR | The type section is wrapped in markers and carried by position (D-14) |
+| JD2-010 | D-22 is pending, but other decisions rely on it | Dependents listed; Open Item now blocks Units 1, 3, and 6 |
+| JD2-011 | A partial Requirement Map can say Resolved | The map states a requirement count; fewer rows cannot be Resolved; GAP-to-WARN pinned (D-12, D-13) |
+| JD2-012 | Step 1's config dependency and the word `default` | The parse uses the config read at skill start; `default` selects the default run (D-7) |
