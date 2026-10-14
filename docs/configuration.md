@@ -96,9 +96,8 @@ of the repo on purpose.
 
 ### `default-swarm-size`
 
-The eight sizing-aware skills ([`/architectural-analysis`](../han-coding/docs/skills/architectural-analysis.md),
+The seven sizing-aware skills ([`/architectural-analysis`](../han-coding/docs/skills/architectural-analysis.md),
 [`/code-overview`](../han-coding/docs/skills/code-overview.md),
-[`/code-review`](../han-coding/docs/skills/code-review.md),
 [`/gap-analysis`](../han-research/docs/skills/gap-analysis.md),
 [`/iterative-plan-review`](../han-planning/docs/skills/iterative-plan-review.md),
 [`/plan-a-feature`](../han-planning/docs/skills/plan-a-feature.md),
@@ -110,8 +109,8 @@ Specialists are still selected by signal within the band's caps. `dynamic`, or o
 auto-classification. Values are trimmed and matched case-insensitively; anything else degrades with a one-line note and
 the skill classifies the size itself.
 
-One configured band applies to all eight skills at once, and their bands scope differently (a `large` code review and a
-`large` research swarm cost different work), so a global `large` raises agent cost on every sizing-aware run. Setting it
+One configured band applies to all seven skills at once, and their bands scope differently (a `large` feature plan and
+a `large` research swarm cost different work), so a global `large` raises agent cost on every sizing-aware run. Setting it
 personally raises that cost in every project you touch, so it is the setting most worth leaving at `dynamic` until you
 want otherwise. The per-run correction never needs a file edit: passing a size on the invocation always wins, and
 passing `dynamic` auto-classifies that run. See [Sizing](./sizing.md) for the bands and per-skill caps.

@@ -37,7 +37,7 @@ name, and Step 7.1 and the verification check read this table rather than listin
 
 ### Step 3.2: Select agents
 
-**Always dispatch — minimum roster across all sizes:**
+**Always dispatch — minimum roster on every review:**
 
 1. `han-core:junior-developer` — generalist clarity and standards check, applicable to any change.
 2. `han-core:adversarial-security-analyst` — security findings have a non-negotiable evidence standard that already
@@ -62,15 +62,15 @@ State the selected roster to the user in one line per agent before launching.
 
 ### Step 3.3: Scope every agent brief to the change
 
-**Step 3.3 is the authoritative home for size-based demotion.** Every other site that needs the size-based rule
-references this step by name rather than restating it: the Review Constraints rule for manual findings, the Step 7.2
-demotion gate for agent findings, the rubric in `references/agent-finding-classification.md`, and the YAGNI two-pass
-procedure in `references/review-checklist.md`.
+**Step 3.3 is the authoritative home for severity calibration.** Every other site that needs the severity rule
+references this step by name rather than restating it: the Review Constraints rule for manual findings, the Step 7.3
+rubric pass for agent findings, the rubric in `references/agent-finding-classification.md`, the validator brief in
+`references/finding-filters.md`, and the YAGNI two-pass procedure in `references/review-checklist.md`.
 
 Every dispatched agent receives — alongside its domain-specific prompt — the following calibration directive verbatim.
-This directive overrides the default review-wide "prefer the higher severity" rule for agent-dispatched findings:
+Manual findings from Steps 4 to 6 follow the same directive, so manual and agent findings share one severity rule.
 
-> **Calibrate findings to the change being reviewed.** This is a **{size}** change touching {N} files. The change does
+> **Calibrate findings to the change being reviewed.** This is a review of a change touching {N} files. The change does
 > the following: {one-line summary from Step 3.1}.
 >
 > Raise a finding only when **at least one** of these holds:
@@ -89,22 +89,16 @@ This directive overrides the default review-wide "prefer the higher severity" ru
 >   same row reconciled twice).
 > - Hypothetical scaling problems for workloads the project does not currently have.
 >
-> Severity calibration scales with size:
+> Severity: Critical and Warning findings escalate; a Suggestion is raised only when this change directly introduces it.
+> When uncertain between two severities, prefer the lower one.
 >
-> - **Small change**: only Critical findings escalate. Raise Warnings only when the finding is directly introduced by
->   this change. Omit Suggestions entirely.
-> - **Medium change**: Critical and Warning findings escalate. Raise Suggestions only when directly introduced by this
->   change.
-> - **Large change**: all severities are in scope.
->
-> When uncertain about severity, prefer the **lower** severity. If the worst-case impact is "an operator sees an error
-> and retries," that is not Critical.
+> If the worst-case impact is "an operator sees an error and retries," that is not Critical.
 >
 > **YAGNI findings are separate from severity.** Apply the two-pass YAGNI procedure documented in
 > [`references/review-checklist.md`](./review-checklist.md) (Pass 1: evidence test against
 > [`../../references/yagni-rule.md`](../../../references/yagni-rule.md) Gate 1; Pass 2: named anti-pattern match) to every
-> change in the diff regardless of size. The size-based demotion in this Step 3.3 directive does NOT apply to YAGNI
-> findings; they are advisory at every size, listed in a separate section, and not corrected unless the user explicitly
+> change in the diff. The severity rule in this Step 3.3 directive does NOT apply to YAGNI
+> findings; they are advisory on every review, listed in a separate section, and not corrected unless the user explicitly
 > requests it. Each finding's body must name (a) the failing evidence type, (b) the matched anti-pattern, and (c) the
 > simpler form considered.
 
@@ -153,7 +147,7 @@ none modifies the agent's general behavior outside `/code-review`.
   evidence per your Protocol 1, but the failure-mode target of every finding stays on the file list."_ This narrower
   wording preserves the agent's caller-read protocol.
 
-Domain-specific prompts (the `{size}`, `{N}`, `{change summary}`, `{file list}`, and `{branch}` placeholders are filled
+Domain-specific prompts (the `{N}`, `{change summary}`, `{file list}`, and `{branch}` placeholders are filled
 from earlier steps):
 
 1. `han-core:test-engineer` — "Analyze test coverage for the following files{if branch available: ' on branch
@@ -263,24 +257,23 @@ cannot run either. That list is what the Review Coverage block in `template.md` 
 
 ```
 Manual-only mode: agent dispatch unavailable ({verbatim tool error, or "Agent tool not in allowed-tools"}).
-Manual review is the primary path. Coverage absent: junior-developer, security, and every conditional agent
-Step 3.2 selected. See the sweep mapping for what substitutes.
+Manual review is the primary path. Coverage absent: {every agent Step 3.2 selected, by name}. See the sweep mapping for what substitutes.
 ```
 
 **The by-hand sweep.** Step 4's manual review normally runs at its own depth beside the specialists. In manual-only
 mode it is also the substitute for them, so for each agent on the absent-coverage list, apply the checklist categories
-mapped below with the extra scrutiny the Step 4 focus-area rule describes, at the `{size}` band from Step 3.1. The
+mapped below with the extra scrutiny the Step 4 focus-area rule describes, under the Step 3.3 calibration directive. The
 mapping is written out for every agent so two runs sweep the same thing, and so that what the sweep does not recover is
 visible rather than implied:
 
-- `han-core:junior-developer` → Code Maintainability, Documentation, Code Style & Patterns, Architecture Decision Records — at the `{size}` band from Step 3.1.
-- `han-core:adversarial-security-analyst` → Data Isolation, Error Handling, API Design — at the `{size}` band. Partial: nothing substitutes for an exploit path demonstrated against the code.
-- `han-core:test-engineer` → Testing, Correctness — at the `{size}` band.
-- `han-core:edge-case-explorer` → Correctness, Error Handling — at the `{size}` band. Partial: the checklist asks whether edge cases are handled, not which ones exist.
-- `han-core:structural-analyst` → Code Organization, Code Maintainability — at the `{size}` band.
-- `han-core:behavioral-analyst` → Error Handling, Correctness — at the `{size}` band.
-- `han-core:data-engineer` → Database, Performance, Data Isolation — at the `{size}` band.
-- `han-core:on-call-engineer` → Error Handling, Performance — at the `{size}` band. Partial: no category covers timeouts, retry backoff, or idempotency.
+- `han-core:junior-developer` → Code Maintainability, Documentation, Code Style & Patterns, Architecture Decision Records.
+- `han-core:adversarial-security-analyst` → Data Isolation, Error Handling, API Design. Partial: nothing substitutes for an exploit path demonstrated against the code.
+- `han-core:test-engineer` → Testing, Correctness.
+- `han-core:edge-case-explorer` → Correctness, Error Handling. Partial: the checklist asks whether edge cases are handled, not which ones exist.
+- `han-core:structural-analyst` → Code Organization, Code Maintainability.
+- `han-core:behavioral-analyst` → Error Handling, Correctness.
+- `han-core:data-engineer` → Database, Performance, Data Isolation.
+- `han-core:on-call-engineer` → Error Handling, Performance. Partial: no category covers timeouts, retry backoff, or idempotency.
 - `han-core:concurrency-analyst` → nothing substitutes. No checklist category covers races, lock ordering, or shared mutable state.
 - `han-core:devops-engineer` → nothing substitutes. No checklist category covers rollout, observability, or infrastructure.
 - `han-core:observability-engineer` → nothing substitutes. No checklist category covers metric cardinality, sampling, or telemetry naming.

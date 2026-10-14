@@ -8,8 +8,7 @@ description:
   code-overview for a written overview, or code-walkthrough to be paced through it one step at a time. Does not map
   bounded contexts or domain boundaries — use ddd-analysis for that. Does not capture feedback on Han''s own skills —
   use han-feedback for that.'
-arguments: size
-argument-hint: "[size: small | medium | large | dynamic] [optional context about changes or areas to focus on]"
+argument-hint: "[focus areas, or file paths in Mode C]"
 allowed-tools:
   Bash(git *), Bash(gh *), Bash(make *), Bash(npm *), Read, Write, Grep, Glob, Agent,
   Bash(bash "${CLAUDE_PLUGIN_ROOT}/scripts/han-config-dir.sh")
@@ -41,11 +40,9 @@ Severity levels:
 - **Suggestion** — Consider improving. Style improvements, optional performance gains, documentation gaps, refactoring
   opportunities.
 
-Severity calibration is governed by **Step 3.3** (the authoritative home for size-based demotion). Manual findings from
-Steps 4 to 6 follow the same size-based rules as agent findings classified at Step 7: Small changes escalate only
-Critical findings and default uncertain ones to the lower severity, Medium changes escalate Critical and Warning, Large
-changes prefer the higher severity when in doubt. Read `{size}` from Step 3.1. Include `file_path:line_number`
-references and code examples for suggested fixes.
+Severity calibration is governed by the **Step 3.3** calibration directive (the authoritative home for the severity
+rule). Manual findings from Steps 4 to 6 follow the same rule as agent findings classified at Step 7. Include
+`file_path:line_number` references and code examples for suggested fixes.
 
 **Finding caps:** Manual review findings (Steps 4-6) and agent findings (Step 7) are each capped at 30 items. Prioritize
 by severity: all CRIT first, then WARN, then SUGG. If either cap is exceeded, note that additional items were omitted
@@ -61,8 +58,8 @@ is not a review finding. Only flag deviations from the project's own conventions
 section, separate from Critical / Warning / Suggestion**, and **do not appear under CRIT / WARN / SUGG**. The YAGNI
 section opens with this exact statement: _"These findings will not be corrected unless explicitly requested. They are
 documented so the team can decide consciously whether to keep, simplify, or defer the items."_ Severity calibration (the
-directive in Step 3.3, the authoritative home) does NOT apply to YAGNI; these findings are surfaced regardless of change
-size and are advisory, not corrective.
+directive in Step 3.3, the authoritative home) does NOT apply to YAGNI; these findings are surfaced on every review and
+are advisory, not corrective.
 
 **Automated tool boundary:** If the project has a linter or formatter, trust it. Only flag style issues that automated
 tools can't catch.
@@ -134,9 +131,14 @@ Use the script output to determine the review mode. If the script reports `git-a
 - Present the discovered files and ask the user to confirm the review scope
 - Note: In Mode C, review files by reading them in full rather than comparing against a diff (no diff is available)
 
-**Bind `$focus_areas`.** Read the user's free-form argument string from the invocation (everything after the optional
-`$size` positional). If non-empty, bind `$focus_areas` to that string verbatim. If empty, bind `$focus_areas` to the
-literal string `none provided`. This binding is consumed by every Step 3.5 agent prompt and by the Step 4 manual review.
+**Parse the argument string.** Read the raw argument string from the invocation. When it is exactly one of `small`,
+`medium`, `large`, or `dynamic` (compared case-insensitively), drop it and print
+`Size options were removed from code review; "{word}" was ignored.` Any other string, including one that only starts
+with one of those words (such as "large file uploads"), is kept whole.
+
+**Bind `$focus_areas`.** Bind `$focus_areas` to what remains of the argument string, verbatim. If empty, bind
+`$focus_areas` to the literal string `none provided`. This binding is consumed by every Step 3.5 agent prompt and by the
+Step 4 manual review.
 
 ## Step 1.5: Load Branch Context
 
@@ -187,56 +189,32 @@ that check.
 Run each command **one at a time, sequentially**, scoped to changed areas when possible. Record each failure (command +
 relevant error output) as a **CRIT** item with category **[Automated Check]**, then continue to the next command.
 
-## Step 3: Classify Change Size and Dispatch Review Agents
+## Step 3: Dispatch Review Agents
 
 Agents analyze source code to identify coverage gaps, edge cases, security vulnerabilities, structural problems,
 runtime-behavior risks, concurrency hazards, and clarity issues — they do not execute tests. (The test command gate
-applies only to Step 2's automated checks.) The classification below decides which agents are dispatched and how their
-briefs are scoped, so agents do not produce findings disproportionate to the change.
+applies only to Step 2's automated checks.) The brief-scoping rules below keep agents from producing findings
+disproportionate to the change.
 
 Determine the output directory for agent reports: if the project has an existing documentation folder (e.g., `docs/`),
 use it; otherwise use the current working directory.
 
-### Step 3.1: Classify the change
+### Step 3.1: Summarize the change
 
-**Default to small.** Start the classification at **small** and only escalate to medium or large when the signals below
-clearly require it. When a signal is borderline, stay at the smaller band. Use these signals on the file list from Step
-1:
-
-- **Small** _(default)_ — 1–3 files affected, single subsystem, no cross-cutting concerns. No new module boundaries. No
-  schema, migration, or infrastructure changes. No auth/PII surface added.
-- **Medium** — 3–10 files, one or two adjacent subsystems. May touch a single cross-cutting concern (one API contract,
-  one schema migration, one new permission check, one new index).
-- **Large** — more than 10 files, multiple subsystems, architectural changes, security or data implications,
-  multi-service coordination, or the user explicitly requests full agent review.
-
-**Size override.** If `$size` is non-empty (the user passed `small`, `medium`, `large`, or `dynamic` as the first
-argument), use it: a band value is the size and skips the signal-based classification, while `dynamic` forces the
-signal-based classification even when the project config sets a default band. If `$size` is empty and the project
-config supplies a band via `default-swarm-size` (per the config rule in
-[../../references/config-rule.md](../../references/config-rule.md)), use that band and skip the signal-based
-classification. Otherwise classify from the signals above. Anywhere else in this skill body that mentions a "user
-override" of size, this argument is the override.
-
-State the chosen size in one line with the justification (e.g., "Medium: 6 files touched, adds one index and a query for
-it", "Medium: passed via `$size`", or "Medium: from the project `.han/config.md` `default-swarm-size`", naming whichever of the two files supplied it). Also draft a one-line summary of what the change does — this is reused in agent
-briefs below.
-
-**This step is the authoritative source for `{size}`.** Every later consumer reads `{size}` from here: the Review
-Constraints rule above, the Step 3.3 calibration directive, the Step 3.5 agent prompts, the Step 7.2 demotion gate, and
-the rubric in `references/agent-finding-classification.md`. Do not re-derive size at any of those sites.
+Count the files on the Step 1 file list as `{N}`, and draft a one-line summary of what the change does. Both are reused
+in the Step 3.3 calibration directive.
 
 ### Steps 3.2 to 3.5: Select, scope, and dispatch agents
 
 These four sub-steps are specified in [agent-dispatch.md](./references/agent-dispatch.md), and every reference to
 Step 3.2, 3.3, 3.4, or 3.5 elsewhere in this skill points there. It carries the roster table (each agent's signal,
-file-list slice, output file, and finding-ID series), the minimum roster dispatched at every size (3.2), the
-brief-scoping rules including the authoritative size-based demotion rule (3.3), the domain-scoped file lists (3.4), the
+file-list slice, output file, and finding-ID series), the minimum roster dispatched on every review (3.2), the
+brief-scoping rules including the authoritative severity rule (3.3), the domain-scoped file lists (3.4), the
 two named-binding blocks, the exact prompt for each agent, and how each agent's returned output is filed (3.5), and
 **manual-only mode**: the mode a run enters when the dispatch mechanism itself fails at
 3.5, with its detection rule, the absent-coverage list selection leaves behind, and the by-hand sweep that substitutes.
 
-Select against the `{size}` from Step 3.1, scope each brief to the change, and dispatch every selected agent in a
+Select from the roster table, scope each brief to the change, and dispatch every selected agent in a
 single message so they run in parallel. If dispatch fails, enter manual-only mode as that file specifies.
 
 Continue to Step 4 immediately. Results will be collected in Step 7.
@@ -269,7 +247,7 @@ apply the review checklist conservatively:
 - **Skip the YAGNI checklist entirely in Mode B and Mode C unless the user explicitly requests it in `$focus_areas`.**
   YAGNI requires distinguishing introduced code from pre-existing code; without a diff, every speculative addition
   predating the change would surface as if introduced now.
-- The size-based demotion in Step 3.3 still applies, but treat the change as Small unless the user passed `$size`.
+- The Step 3.3 calibration directive still applies.
 
 ## Step 5: Documentation Compliance Analysis
 
@@ -341,7 +319,7 @@ and skip Step 7.4 too, because it dispatches an agent. Outside that mode, Step 7
 at least one corrective finding (manual or agent).**
 
 This step runs in four numbered sub-steps. Order matters: read the agent output, apply the reachability demotion gate,
-apply the size-aware rubric, then validate the consolidated finding list with an independent adversarial pass.
+apply the rubric, then validate the consolidated finding list with an independent adversarial pass.
 
 ### Step 7.1: Read agent output
 
@@ -358,11 +336,11 @@ Specified in [finding-filters.md](./references/finding-filters.md). It scans eac
 reachability phrases and demotes one severity on a match, exempting security findings. Keep the reasoning behind each
 demotion: Step 8 publishes it as that finding's preconditions and likelihood.
 
-### Step 7.3: Classify with the size-aware rubric
+### Step 7.3: Classify with the rubric
 
 Classify the surviving findings using the rubrics at
 [agent-finding-classification.md](./references/agent-finding-classification.md). The rubric defines what each severity
-means in each agent category; Step 3.3's size-based demotion (read `{size}` from Step 3.1) governs which findings
+means in each agent category; the Step 3.3 calibration directive governs which findings
 escalate to those bands. Continue task ID numbering sequentially from Steps 4-6 (see Task ID Assignment above).
 
 ### Deferred tests
@@ -471,7 +449,7 @@ report yet.
    total.
 3. **The path** to the report file. Name the report you replaced when Step 8.6 replaced one, and the destination you
    could not use when it fell back.
-4. **The run's own facts, last:** the size band and why, and the validator reconciliation line. In manual-only mode,
+4. **The run's own facts, last:** the validator reconciliation line. In manual-only mode,
    one clause: agent dispatch was unavailable, so no specialist read this change; how many coverage areas were swept by
    hand and how many were not; and a pointer to the report's Review Coverage section. Name the cause and the
    consequence, never the mode name, and do not list the areas; the report's block does. Or nothing at all.
@@ -486,5 +464,5 @@ Two states this message has to get right:
   findings to explain.
 - **Only advisory findings.** Still recommend approval, BECAUSE the YAGNI class is non-correcting by construction and
   never blocks a merge. Say the count needing action is zero and name the advisory count beside it, so nobody is told
-  "no findings" about a report whose body lists items. The advisory pass runs on every change regardless of size, so
+  "no findings" about a report whose body lists items. The advisory pass runs on every change, so
   this is an ordinary state, not an exotic one.

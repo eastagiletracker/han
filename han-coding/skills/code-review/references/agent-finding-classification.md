@@ -12,10 +12,10 @@
 - Processing observability-engineer results (only if dispatched)
 - Processing junior-developer results
 
-**Size-based demotion (applies to every category below).** Size-based demotion is governed by [SKILL.md](../SKILL.md)
-Step 3.3, the authoritative home for size-based severity rules. The bands in each category define what each severity
-means; Step 3.3 governs which findings escalate to those bands at the change's size (read from Step 3.1). When
-uncertain, prefer the lower severity. The per-category bands below do not restate this rule.
+**Severity calibration (applies to every category below).** Severity calibration is governed by the Step 3.3
+calibration directive in [agent-dispatch.md](./agent-dispatch.md), the authoritative home for the severity rule. The
+bands in each category define what each severity means; the directive governs which findings escalate to those bands.
+When uncertain, prefer the lower severity. The per-category bands below do not restate this rule.
 
 ### Processing test-engineer results
 
