@@ -9,8 +9,8 @@ description:
   bounded contexts or domain boundaries — use ddd-analysis for that. Does not capture feedback on Han''s own skills —
   use han-feedback for that.'
 argument-hint:
-  "[type: security | testing | architecture | observability | maintainability | work-ticket <ticket>] [focus areas, or
-  file paths in Mode C]"
+  "[type: security | testing | architecture | observability | maintainability | work-ticket <ticket> | a type from
+  .han/config.md] [focus areas, or file paths in Mode C]"
 allowed-tools:
   Bash(git *), Bash(gh *), Bash(make *), Bash(npm *), Read, Write, Grep, Glob, Agent,
   Bash(bash "${CLAUDE_PLUGIN_ROOT}/scripts/han-config-dir.sh")
@@ -109,7 +109,8 @@ table is the only list of shipped type tokens:
 Default (no type token): security, testing, architecture, observability, maintainability
 Default always-run agents: han-core:junior-developer, han-core:adversarial-security-analyst
 Every other agent in the default set's rosters: dispatched only when its roster signal fires
-Also on the default run, under the same signal rule: ## Extra Agents
+Also on the default run, under the same signal rule: agents .han/config.md attaches to a default-set type, and ## Extra Agents
+More types: declared under ## Code Review Types in .han/config.md; never part of the default run
 ```
 
 **The default run** is one run with one report. Its roster is the union of the default set's rosters under the rule
@@ -137,6 +138,56 @@ to say holds the literal word `none`, except `## Severity`, which holds `default
 A `## Severity` text replaces both lines of the slot, so it must say which severities are reported and which way an
 uncertain finding goes. The YAGNI pass in Step 4 always runs, whatever `## Checklist categories` says.
 
+### Review types and agents from `.han/config.md`
+
+A team declares review types Han does not ship, and attaches its own agents to any type, in either config file read at
+the top of this skill. [config-rule.md](../../references/config-rule.md) governs path resolution and which file wins;
+the line formats and how this skill uses them are defined here.
+
+```markdown
+## Code Review Types
+
+- pii-check: .han/review-types/pii-check.md
+
+## Code Review Type Agents
+
+- testing: acme:mutation-tester
+- pii-check: acme:pii-scanner
+```
+
+**`## Code Review Types`** names a token and the type file for it, one per line.
+
+- **Token:** lowercase letters, digits, and hyphens, starting with a letter. A shipped token, a retired size word
+  (`small`, `medium`, `large`, `dynamic`), or `default` is reserved, and its line is ignored with the note
+  `{project|personal} .han/config.md: review type "{token}" is a reserved name and was ignored.`
+- **Path:** resolves as `writing-voice` does. When both files declare one token, the project file's line wins; the two
+  files' different tokens add together.
+- **File:** follows the type-file contract above exactly. Its `## Roster` may name any agent available in the session.
+- **When it is read:** only when its token is invoked. A project line whose file is missing or incomplete falls through
+  to the personal file's line for the same token. When no usable line remains, the run stops before Step 2:
+  `Review type "{token}" is declared in the {project|personal} .han/config.md as {path}, but {the file was not found | its "{name}" section is missing}. No review ran.`
+  It stops rather than asking, because the repair is an edit to a file outside the conversation and a rerun is the
+  retry.
+- **Scope:** a configured type never joins the default run. Its `## Instructions` are operator-authored text, trusted
+  as config is.
+
+**`## Code Review Type Agents`** names a type token, shipped or configured, and one or more comma-separated agents.
+
+- A line is read only when its token is the run's type, or when the run is the default run and its token is in the
+  default set. A line naming a type that never runs is silent.
+- Agent names match as `## Extra Agents` entries do: qualified or bare, case-insensitive. A name that does not resolve
+  to a dispatchable agent is skipped with a one-line note. Both files' lines add together, and an agent named twice for
+  one type runs once.
+- On a run of that type, every attached agent runs, with no signal gate. On the default run, agents attached to a
+  default-set type join under the `## Extra Agents` signal rule.
+
+**An agent without a roster-table row** (one a configured type or a config line names) uses the roster table's last
+row in [agent-dispatch.md](./references/agent-dispatch.md). It runs whenever its type runs, whichever roster line names
+it.
+
+**`## Extra Agents`** reaches only the default run, under its signal rule. A typed run does not consider it and says
+nothing about it.
+
 ## Step 1: Identify Changes
 
 Resolve project config: read CLAUDE.md's `## Project Discovery` section for docs, ADR, and coding-standards directories
@@ -153,13 +204,17 @@ args         := [ retired-size ] [ type-clause ] [ rest ]
 retired-size := "small" | "medium" | "large" | "dynamic"
                 (recognized only as the first token, and only when it is the whole string or the next token is a type token)
 type-clause  := type-token | "work-ticket" SP ticket-ref
-type-token   := a Token from the ## Review Types table other than work-ticket
+type-token   := a Token from the ## Review Types table other than work-ticket,
+                or a token declared under ## Code Review Types in either .han/config.md
 ticket-ref   := the next token as given; a double-quoted token may contain spaces
 rest         := the remaining string, verbatim → $focus_areas ("none provided" when empty);
                 in Mode C, tokens in rest that resolve as paths or globs also build the file list
 matching     := tokens split on whitespace and compare case-insensitively; a quoted first token is never a type token
 default      := a first token of "default" selects the default run explicitly and is removed from the focus text
 ```
+
+The parse uses the config read at the top of this skill, after dropping configured tokens that are reserved, so every
+configured token is known before the first word is read.
 
 - **A retired size word** is dropped with the note `Size options were removed from code review; "{word}" was ignored.`
   Anywhere else it stays in the focus text, so "large file uploads" keeps its first word.
@@ -185,6 +240,7 @@ consumed by every Step 3.5 agent prompt and by the Step 4 manual review.
 | `/code-review large`                                             | default set, plus the size note                                       | `none provided`                                 |
 | `/code-review large testing`                                     | `testing`, plus the size note                                         | `none provided`                                 |
 | `/code-review large file uploads`                                | default set                                                           | `large file uploads`                            |
+| `/code-review pii-check` (configured)                            | `pii-check`                                                           | `none provided`                                 |
 | `/code-review testing src/retry.ts` (Mode C)                     | `testing`                                                             | `src/retry.ts`, which also builds the file list |
 | `/code-review ./testing` (Mode C)                                | default set                                                           | `./testing`, which also builds the file list    |
 
@@ -228,8 +284,10 @@ Use the script output to determine the review mode. If the script reports `git-a
 Once the review mode is known, read the type file for the type the parse selected, and check it against the type-file
 contract in `## Review Types`:
 
-- **A missing section** stops the run before Step 2, with nothing dispatched and no report written:
-  `Review type file {path} is missing section "{name}". No review ran.`
+- **A missing section** in a shipped type file stops the run before Step 2, with nothing dispatched and no report
+  written: `Review type file {path} is missing section "{name}". No review ran.`
+- **A configured type** is read from the line that `Review types and agents from .han/config.md` above selects, with
+  its fall-through and its own stop message when no usable line remains.
 - **A checklist category** that [review-checklist.md](./references/review-checklist.md) does not bold is skipped with
   the one-line note `Review type {token}: checklist category "{name}" does not exist and was skipped.`
 
@@ -238,7 +296,7 @@ The default run reads the five default-set type files for their rosters and chec
 **Announce the review type**, as the last thing Step 1 does and before Step 2 runs anything:
 
 ```
-Review type: {token}: {Purpose}
+Review type: {token}: {Purpose}{ (declared in the project .han/config.md | declared in the personal .han/config.md)}
 Focus: {$focus_areas}
 ```
 
@@ -246,7 +304,7 @@ or, with no type token:
 
 ```
 Review type: default (no type given{; "{first word}" is not a review type, so it is read as focus text})
-Available types: {every shipped token}
+Available types: {every shipped token}{, every configured token}
 Focus: {$focus_areas}
 ```
 

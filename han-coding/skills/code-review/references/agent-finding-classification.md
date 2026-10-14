@@ -12,6 +12,7 @@
 - Processing observability-engineer results (only if dispatched)
 - Processing junior-developer results
 - Processing gap-analyzer results (only if dispatched)
+- Processing results from an agent without a roster-table row
 
 **Severity calibration (applies to every category below).** Severity calibration is governed by the Step 3.3
 calibration directive in [agent-dispatch.md](./agent-dispatch.md), the authoritative home for the severity rule. The
@@ -198,3 +199,9 @@ severity:
 
 Keep a map from each GAP-### to the task ID it becomes, so the Ticket Resolution table can show that task ID as the
 row's evidence. Carry the `## Requirement Map` into the report's type section; it produces no findings of its own.
+
+### Processing results from an agent without a roster-table row
+
+An agent a configured type or a `.han/config.md` line names, with no roster-table row of its own, has no rubric here.
+Keep its findings in its `X-{agent name}` series, assign the category **[{agent name}]**, and classify each finding by
+the Step 3.3 calibration directive alone. The Step 7.2 reachability gate applies to these findings.
