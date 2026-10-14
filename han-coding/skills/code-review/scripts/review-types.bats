@@ -1,7 +1,8 @@
 #!/usr/bin/env bats
 #
 # Tests for code-review's shipped review types: the agreements that hold the
-# `## Review Types` table in SKILL.md, the argument-hint, the type files under
+# `## Review Types` table in SKILL.md, the argument-hint here and in
+# han-github's post-code-review-to-pr, the type files under
 # references/types/, the roster table in references/agent-dispatch.md, and the
 # bolded categories in references/review-checklist.md together. Each of these
 # agreements spans files and holds only by convention, so it is checked here.
@@ -12,6 +13,7 @@ setup() {
   DISPATCH="$SKILL_DIR/references/agent-dispatch.md"
   CHECKLIST="$SKILL_DIR/references/review-checklist.md"
   TYPES_DIR="$SKILL_DIR/references/types"
+  PR_SKILL="$SKILL_DIR/../../../han-github/skills/post-code-review-to-pr/SKILL.md"
 }
 
 # Print the body of the `## Review Types` section of SKILL.md, up to the next `## ` heading.
@@ -48,13 +50,15 @@ default_set() {
   review_types_section | sed -n 's/^Default (no type token): //p' | tr ',' '\n' | sed -e 's/^ *//' -e 's/ *$//'
 }
 
-@test "every shipped type file has a table row and an argument-hint token, and every row names an existing file" {
+@test "every shipped type file has a table row and a token in both argument-hints, and every row names an existing file" {
   hint="$(argument_hint "$SKILL")"
+  pr_hint="$(argument_hint "$PR_SKILL")"
   for f in "$TYPES_DIR"/*.md; do
     token="$(basename "$f" .md)"
     run grep -E "^\| \`$token\` +\| \[references/types/$token\.md\]\(\./references/types/$token\.md\)" <(review_types_section)
     [ "$status" -eq 0 ] || { echo "no ## Review Types row for $token"; return 1; }
     [[ "$hint" == *"$token"* ]] || { echo "code-review argument-hint lacks $token"; return 1; }
+    [[ "$pr_hint" == *"$token"* ]] || { echo "post-code-review-to-pr argument-hint lacks $token"; return 1; }
   done
   while read -r token; do
     [ -f "$TYPES_DIR/$token.md" ] || { echo "table row $token names no file"; return 1; }
