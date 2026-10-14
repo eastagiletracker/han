@@ -11,7 +11,7 @@ Check the change's clarity, naming, and fit with the project's own standards.
 
 ## Checklist categories
 
-Code Maintainability, Documentation, Code Style & Patterns, Architecture Decision Records, Packaging
+Code Maintainability, Documentation, Code Style & Patterns, Architecture Decision Records
 
 ## Severity
 

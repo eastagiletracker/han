@@ -7,7 +7,7 @@ Check the change's telemetry design and whether its failures are visible.
 ## Roster
 
 - Always: han-core:observability-engineer
-- When relevant: han-core:devops-engineer
+- When relevant: none
 
 ## Checklist categories
 
