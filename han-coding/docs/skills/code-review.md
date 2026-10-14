@@ -12,12 +12,11 @@ to use the skill. For what the skill does internally, read the skill definition 
 - **What it does.** Reviews a branch, uncommitted work, or named files for one named concern, such as security or
   testing, with the specialist agents that review type names, or runs the default review across all of them.
 - **When to use it.** You want a principled review of what changed before merge: correctness, testing, security,
-  documentation compliance, and project-pattern deference.
-- **What you get back.** A structured review with findings classified as CRIT / WARN / SUGG, each with
-  `file_path:line_number` references and suggested fixes.
-- **Typed.** Name a review type as the first word (`/code-review testing`) to run only that concern's specialists, so
-  several focused reviews of one branch can run side by side. With no type, it runs the default review, which covers
-  security, testing, architecture, observability, and maintainability together.
+  documentation compliance, and project-pattern deference. Name a review type as the first word
+  (`/code-review testing`) to focus on one concern, and run several typed reviews of one branch side by side.
+- **What you get back.** A review report file with findings classified as CRIT / WARN / SUGG, each with
+  `file_path:line_number` references and suggested fixes. A typed run's report name ends in `--{type}`, and the
+  specialists' working files sit in a run folder beside it.
 
 ## Key concepts
 

@@ -2,7 +2,9 @@
 name: code-review
 description:
   'Run a comprehensive code review on local source files. Use this skill when the user asks to review, audit, inspect,
-  evaluate, or check code, even if they never use the word "review." Does not post comments to GitHub pull requests —
+  evaluate, or check code, even if they never use the word "review." Name a review type (security, testing,
+  architecture, observability, maintainability, work-ticket with a ticket, or one declared in .han/config.md) to focus
+  on one concern, or omit it for the default review. Does not post comments to GitHub pull requests —
   use post-code-review-to-pr for that. Does not analyze architectural structure or module boundaries — use
   architectural-analysis for that. Does not explain code or a PR to build understanding before reviewing — use
   code-overview for a written overview, or code-walkthrough to be paced through it one step at a time. Does not map
