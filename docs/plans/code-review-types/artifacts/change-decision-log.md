@@ -766,34 +766,45 @@ refer to the Review Findings section of the plan.
 - **Dependent decisions:** None
 - **Referenced in plan:** Target State, Surface Delta, Change Units
 
-### D-22: Agents return their findings, and the skill writes each agent's file
+### D-22: Agents hand back their findings, as a file they name or as raw output, and the skill uses either
 
 - **Question:** How do findings reliably reach the report when three shipped specialists have no Write tool, extra
   agents have no output file, and parallel or repeated runs share folders?
 - **Decision:** Every Step 3.5 prompt ends with one fixed sentence in place of "Write your output to …":
 
-  > Do not write any file. Return your complete output, including every finding, as your final message.
+  > If you write your output to a file, write it to {run_directory}/{Output file} and name that path in your final
+  > message. Otherwise, return your complete output, including every finding, as your final message, in any format.
 
-  When an agent returns, the skill writes the returned message to `{run_directory}/{Output file}` (reading the file
-  first if it already exists, so the Write tool can replace it). When an agent fails or returns nothing usable, the
-  skill writes `Not covered in this run: {reason}` to the same file and records the agent as not covered. Step 7.1
-  reads only the files Step 3.5 wrote in this run and never a file it did not write in this run. `gap-analyzer` follows
-  the same sentence; its prompt (D-12) asks for the Requirement Map in the returned message.
-- **Rationale:** Three roster agents are told to write a file they cannot write (C-23, R1). Extra agents' output is
-  never read (C-23). Writing every file from the skill makes one rule cover shipped agents, attached agents, and
-  configured types' agents, and overwriting each dispatched agent's file in every run means a rerun cannot read a stale
-  file, without deleting anything.
-- **Evidence:** C-23 (Verified tool lists); R1; JD-001; C-13.
-- **Behavior impact:** Pending the operator's decision. The plan's working classification is Changing: if today's runs
-  lose the structure, behavior, and concurrency specialists' findings, those findings start reaching the report. C-23
-  could not confirm what a live run does today, so this is escalated rather than assumed.
+  When an agent returns, the skill uses one of two sources and records which:
+  - **A file the agent names.** When the final message names a file path and that file exists, Step 7.1 reads that
+    file. The agent named it in this run, so it is this run's output.
+  - **Raw output.** Otherwise the skill writes the returned message, in whatever format it came, to
+    `{run_directory}/{Output file}` (reading the file first if it already exists, so the Write tool can replace it), and
+    Step 7.1 reads that.
+
+  A named file that does not exist falls back to the returned message. When an agent fails or returns nothing usable,
+  the skill writes `Not covered in this run: {reason}` to `{run_directory}/{Output file}` and records the agent as not
+  covered. Step 7.1 reads only the sources recorded in this run, never a file it did not record in this run. Step 7.1
+  extracts findings from whatever format the source holds. `gap-analyzer`, whose definition writes a file and returns a
+  summary, is covered by the first source; its prompt (D-12) asks for the Requirement Map inside the output.
+- **Rationale:** The operator, verbatim: "option 1. if an sub-agent produces a file and tells the review skill about
+  it, use it. if the sub-agent sends back the raw results, in whatever format, use it." Three roster agents are told to
+  write a file they cannot write (C-23, R1). Extra agents' output is never read (C-23). Recording a source per agent in
+  every run means a rerun cannot read a stale file, without deleting anything.
+- **Evidence:** Operator answer above; C-23 (Verified tool lists); C-20 (`gap-analyzer` writes to file and returns a
+  summary); R1; JD-001; C-13.
+- **Behavior impact:** Changing. Findings from the structure, behavior, and concurrency specialists, and from extra
+  agents on the default run, reliably reach the report; a report may show findings it was silently missing before. The
+  operator accepted this.
 - **Rejected alternatives:**
-  - Add Write to the three agents' definitions — rejected because it changes shared han-core agents that other skills
-    dispatch, to fix one caller.
+  - Add Write to the three agents' definitions — rejected by the operator; it changes shared han-core agents that other
+    skills dispatch, and leaves extra agents unread.
+  - Forbid agents from writing files — rejected by the operator's answer, which accepts a named file.
+  - Leave it as a known gap — rejected by the operator.
   - A pending marker per file — rejected (JD-001, R1); see D-10.
-- **Revisit criterion:** A shipped agent's output is too large to return as a message.
+- **Revisit criterion:** A shipped agent's output is too large to return as a message and it has no Write tool.
 - **Dissent (if any):** None.
 - **Settles delta entry:** S-31
 - **Dependent decisions:** D-10 (no stale reads without deleting files), D-20 and D-21 (configured agents' output is
-  read), D-1's last row (JD2-010)
+  read), D-1's last row
 - **Referenced in plan:** Target State, Surface Delta, Behavior Changes
