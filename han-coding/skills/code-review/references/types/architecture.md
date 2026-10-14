@@ -7,7 +7,7 @@ Check the change's module structure, dependency direction, and runtime flow.
 ## Roster
 
 - Always: han-core:structural-analyst, han-core:behavioral-analyst
-- When relevant: han-core:concurrency-analyst, han-core:data-engineer
+- When relevant: han-core:data-engineer
 
 ## Checklist categories
 
