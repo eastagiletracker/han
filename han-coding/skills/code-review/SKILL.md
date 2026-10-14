@@ -229,10 +229,11 @@ the rubric in `references/agent-finding-classification.md`. Do not re-derive siz
 ### Steps 3.2 to 3.5: Select, scope, and dispatch agents
 
 These four sub-steps are specified in [agent-dispatch.md](./references/agent-dispatch.md), and every reference to
-Step 3.2, 3.3, 3.4, or 3.5 elsewhere in this skill points there. It carries the minimum roster dispatched at every size
-and the file-list signals that select each conditional agent (3.2), the brief-scoping rules including the authoritative
-size-based demotion rule (3.3), the domain-scoped file lists (3.4), the two named-binding blocks plus the exact
-prompt for each agent (3.5), and **manual-only mode**: the mode a run enters when the dispatch mechanism itself fails at
+Step 3.2, 3.3, 3.4, or 3.5 elsewhere in this skill points there. It carries the roster table (each agent's signal,
+file-list slice, output file, and finding-ID series), the minimum roster dispatched at every size (3.2), the
+brief-scoping rules including the authoritative size-based demotion rule (3.3), the domain-scoped file lists (3.4), the
+two named-binding blocks, the exact prompt for each agent, and how each agent's returned output is filed (3.5), and
+**manual-only mode**: the mode a run enters when the dispatch mechanism itself fails at
 3.5, with its detection rule, the absent-coverage list selection leaves behind, and the by-hand sweep that substitutes.
 
 Select against the `{size}` from Step 3.1, scope each brief to the change, and dispatch every selected agent in a
@@ -334,7 +335,7 @@ Documentation freshness findings merge into the same output sections as the othe
 
 ## Step 7: Collect and Classify Agent Results
 
-Wait for all agents dispatched in Step 3 to complete. Each agent returns a summary with finding counts and a file path.
+Wait for all agents dispatched in Step 3 to complete, and file what each returns as Step 3.5 specifies.
 **In manual-only mode (the dispatch mechanism failed at Step 3.5; defined in `agent-dispatch.md`), skip Steps 7.1–7.3,
 and skip Step 7.4 too, because it dispatches an agent. Outside that mode, Step 7.4 runs whenever the review has produced
 at least one corrective finding (manual or agent).**
@@ -342,24 +343,14 @@ at least one corrective finding (manual or agent).**
 This step runs in four numbered sub-steps. Order matters: read the agent output, apply the reachability demotion gate,
 apply the size-aware rubric, then validate the consolidated finding list with an independent adversarial pass.
 
-### Step 7.1: Read agent output files
+### Step 7.1: Read agent output
 
-Read only the output files for agents that were actually dispatched in Step 3. Skip the read for any agent that was not
-selected:
+For each agent dispatched at Step 3.5, read the source Step 3.5 recorded for it in this run: the file the agent named,
+or the file the skill wrote from its returned message. Read nothing else, so a file left by an earlier run is never
+read. An agent recorded as not covered contributes no findings.
 
-- `{output_directory}/test-plan.md` — han-core:test-engineer findings (T-series)
-- `{output_directory}/edge-case-analysis.md` — han-core:edge-case-explorer findings (EC-series)
-- `{output_directory}/security-analysis.md` — han-core:adversarial-security-analyst findings (SEC-series)
-- `{output_directory}/structural-analysis.md` — han-core:structural-analyst findings (S-series)
-- `{output_directory}/behavioral-analysis.md` — han-core:behavioral-analyst findings (B-series)
-- `{output_directory}/junior-developer-review.md` — han-core:junior-developer findings (JD-series)
-- `{output_directory}/concurrency-analysis.md` — han-core:concurrency-analyst findings (C-series)
-- `{output_directory}/data-analysis.md` — han-core:data-engineer findings (D-series)
-- `{output_directory}/devops-analysis.md` — han-core:devops-engineer findings (DV-series)
-- `{output_directory}/on-call-analysis.md` — han-core:on-call-engineer findings (OCE-series)
-- `{output_directory}/observability-analysis.md` — han-core:observability-engineer findings (OBS-series)
-
-Extract the items from the Findings sections of each file that was read.
+Sources come in whatever format the agent produced. Extract every finding from each source, and number it in the
+agent's series from the roster table in [agent-dispatch.md](./references/agent-dispatch.md) (for example `T1`, `SEC-001`).
 
 ### Step 7.2: Apply the reachability phrase-match demotion gate
 

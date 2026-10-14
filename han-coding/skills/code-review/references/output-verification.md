@@ -37,9 +37,9 @@ check.
 Then verify:
 
 1. Task IDs are sequential within each category (CRIT-001, CRIT-002, ...; WARN-001, WARN-002, ...)
-2. Agent findings from every dispatched agent (testing, edge-case, structural, behavioral, concurrency, data, devops,
-   han-core:junior-developer) have valid task IDs continuing from manual review IDs. Findings from agents that were not
-   dispatched in Step 3 must not appear.
+2. Agent findings from every agent dispatched in Step 3 (every row of the roster table in `agent-dispatch.md` that was
+   selected) have valid task IDs continuing from manual review IDs. Findings from agents that were not dispatched in
+   Step 3 must not appear.
 3. Agent findings have valid `file_path:line_number` references
 4. Deferred tests note is present if the han-core:test-engineer produced skipped items
 5. The Review Summary table includes every corrective finding (CRIT/WARN/SUGG) and every security finding, and matches

@@ -2,14 +2,38 @@
 
 ## Contents
 
+- The roster table
 - Step 3.2: Select agents
 - Step 3.3: Scope every agent brief to the change
 - Step 3.4: Domain-scoped file lists
+- Step 3.5: Dispatch, and file what each agent returns
 - Manual-only mode: when the dispatch mechanism fails
 
 The review roster, the signals that select each agent, the brief-scoping rules, the domain-scoped file
-lists, the exact per-agent dispatch prompts, and the manual-only mode a run enters when it cannot dispatch at all. Step 3 selects and dispatches using this file. The sub-step numbering below is the skill's own; other sites cite
-these sections as Step 3.2 through Step 3.5.
+lists, the exact per-agent dispatch prompts, how each agent's output is filed, and the manual-only mode a run enters
+when it cannot dispatch at all. Step 3 selects and dispatches using this file. The sub-step numbering below is the
+skill's own; other sites cite these sections as Step 3.2 through Step 3.5.
+
+### The roster table
+
+One row per agent the review can dispatch. It is the single home for each agent's selection signal, the slice of the
+file list it receives, the file its output is filed under, and the finding-ID series its findings use. Every other
+per-agent block in this file (the dispatcher directives, the prompts, the manual-sweep rows) is keyed by the same agent
+name, and Step 7.1 and the verification check read this table rather than listing agents themselves.
+
+| Agent                                   | Signal                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | File-list slice                                                                                               | Output file                | Series |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------- | ------ |
+| `han-core:junior-developer`             | any change (generalist)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | full file list (generalist)                                                                                   | junior-developer-review.md | JD     |
+| `han-core:adversarial-security-analyst` | any change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | full file list plus dependency manifests                                                                      | security-analysis.md       | SEC    |
+| `han-core:test-engineer`                | source files with logic or behavior were added or modified (skip for docs-only or pure config changes)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | source files plus their related test files                                                                    | test-plan.md               | T      |
+| `han-core:edge-case-explorer`           | code processes inputs with boundaries, parses external data, or handles multiple states (skip for trivial edits, renames, or docs-only changes)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | source files containing logic or input handling                                                               | edge-case-analysis.md      | EC     |
+| `han-core:structural-analyst`           | the change introduces new files, new modules, or modifies dependency direction across modules (skip for single-file in-place edits)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | source files only (skip configs, schemas, docs)                                                               | structural-analysis.md     | S      |
+| `han-core:behavioral-analyst`           | the change modifies runtime data flow across module boundaries, error propagation paths, or state management (skip for self-contained changes within a single function or class)                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | source files containing runtime logic                                                                         | behavioral-analysis.md     | B      |
+| `han-core:concurrency-analyst`          | the file list touches threads, async/await, goroutines, actors, shared mutable state across requests, timers, locks, or message queues                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | source files matching the concurrency signal                                                                  | concurrency-analysis.md    | C      |
+| `han-core:data-engineer`                | the change touches a schema definition, migration file, query, ORM model, index definition, document shape, stream contract, or data-access module                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | schema, migration, query, ORM, and data-access files only                                                     | data-analysis.md           | D      |
+| `han-core:devops-engineer`              | the change touches Dockerfiles, IaC (Terraform/Pulumi/CloudFormation), Kubernetes manifests, CI/CD pipeline files, deployment scripts, observability config, feature-flag config, or rollout-affecting code paths                                                                                                                                                                                                                                                                                                                                                                                                                                             | infra, deploy, CI/CD, observability files only                                                                | devops-analysis.md         | DV     |
+| `han-core:on-call-engineer`             | the change adds or modifies application source that runs in production with runtime resilience surface — outbound calls (HTTP, RPC, database, cache, queue, lock), retry logic, queue or buffer handling, async/await or goroutine/thread-pool code, error-handling on the failure path, fan-out loops, idempotency checks, schema migrations co-deployed with dependent application code, or new production code paths. Skip for pure config, docs, generated files, and `han-core:devops-engineer`-territory changes (Dockerfiles, IaC, manifests, pipeline files, observability platform config) — the hard boundary lives at the application source line. | application source files only (no Dockerfiles, IaC, manifests, pipeline files, observability platform config) | on-call-analysis.md        | OCE    |
+| `han-core:observability-engineer`       | the change adds or alters telemetry design: metric instruments or labels, span attributes, log schemas, OpenTelemetry SDK setup (samplers, exporters, resource attributes), or telemetry pipeline configuration (OpenTelemetry Collector, Prometheus scrape or relabel rules, a log shipper). Skip when the only telemetry is a log line or metric on a new path (`han-core:on-call-engineer` covers debuggability) and for SLO, alert-rule, or dashboard changes (`han-core:devops-engineer`).                                                                                                                                                               | source files with instrumentation calls, plus telemetry SDK setup and telemetry pipeline configuration files  | observability-analysis.md  | OBS    |
 
 ### Step 3.2: Select agents
 
@@ -19,19 +43,8 @@ these sections as Step 3.2 through Step 3.5.
 2. `han-core:adversarial-security-analyst` — security findings have a non-negotiable evidence standard that already
    prevents theoretical reports; the agent stays silent when the standard is not met.
 
-**Conditionally dispatch the rest based on signals in the file list.** Skip any whose signal does not appear:
-
-| Agent                             | Include when...                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `han-core:test-engineer`          | source files with logic or behavior were added or modified (skip for docs-only or pure config changes)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `han-core:edge-case-explorer`     | code processes inputs with boundaries, parses external data, or handles multiple states (skip for trivial edits, renames, or docs-only changes)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `han-core:structural-analyst`     | the change introduces new files, new modules, or modifies dependency direction across modules (skip for single-file in-place edits)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `han-core:behavioral-analyst`     | the change modifies runtime data flow across module boundaries, error propagation paths, or state management (skip for self-contained changes within a single function or class)                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `han-core:concurrency-analyst`    | the file list touches threads, async/await, goroutines, actors, shared mutable state across requests, timers, locks, or message queues                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `han-core:data-engineer`          | the change touches a schema definition, migration file, query, ORM model, index definition, document shape, stream contract, or data-access module                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `han-core:devops-engineer`        | the change touches Dockerfiles, IaC (Terraform/Pulumi/CloudFormation), Kubernetes manifests, CI/CD pipeline files, deployment scripts, observability config, feature-flag config, or rollout-affecting code paths                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| `han-core:on-call-engineer`       | the change adds or modifies application source that runs in production with runtime resilience surface — outbound calls (HTTP, RPC, database, cache, queue, lock), retry logic, queue or buffer handling, async/await or goroutine/thread-pool code, error-handling on the failure path, fan-out loops, idempotency checks, schema migrations co-deployed with dependent application code, or new production code paths. Skip for pure config, docs, generated files, and `han-core:devops-engineer`-territory changes (Dockerfiles, IaC, manifests, pipeline files, observability platform config) — the hard boundary lives at the application source line. |
-| `han-core:observability-engineer` | the change adds or alters telemetry design: metric instruments or labels, span attributes, log schemas, OpenTelemetry SDK setup (samplers, exporters, resource attributes), or telemetry pipeline configuration (OpenTelemetry Collector, Prometheus scrape or relabel rules, a log shipper). Skip when the only telemetry is a log line or metric on a new path (`han-core:on-call-engineer` covers debuggability) and for SLO, alert-rule, or dashboard changes (`han-core:devops-engineer`).                                                                                                                                                               |
+**Conditionally dispatch the rest based on the Signal column of the roster table.** Skip any agent whose signal does
+not appear in the file list.
 
 **Selection rules:**
 
@@ -97,21 +110,9 @@ This directive overrides the default review-wide "prefer the higher severity" ru
 
 ### Step 3.4: Domain-scoped file lists
 
-Pass each agent only the slice of the file list relevant to its domain:
+Pass each agent only the slice of the file list in its roster-table row's File-list slice column.
 
-| Agent                                   | File-list slice                                                                                               |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `han-core:junior-developer`             | full file list (generalist)                                                                                   |
-| `han-core:adversarial-security-analyst` | full file list plus dependency manifests                                                                      |
-| `han-core:test-engineer`                | source files plus their related test files                                                                    |
-| `han-core:edge-case-explorer`           | source files containing logic or input handling                                                               |
-| `han-core:structural-analyst`           | source files only (skip configs, schemas, docs)                                                               |
-| `han-core:behavioral-analyst`           | source files containing runtime logic                                                                         |
-| `han-core:concurrency-analyst`          | source files matching the concurrency signal                                                                  |
-| `han-core:data-engineer`                | schema, migration, query, ORM, and data-access files only                                                     |
-| `han-core:devops-engineer`              | infra, deploy, CI/CD, observability files only                                                                |
-| `han-core:on-call-engineer`             | application source files only (no Dockerfiles, IaC, manifests, pipeline files, observability platform config) |
-| `han-core:observability-engineer`       | source files with instrumentation calls, plus telemetry SDK setup and telemetry pipeline configuration files  |
+### Step 3.5: Dispatch, and file what each agent returns
 
 **Two named-binding blocks ship with every agent prompt.** Append the following to every prompt below, after the
 calibration directive and before the domain-specific instructions:
@@ -156,49 +157,43 @@ Domain-specific prompts (the `{size}`, `{N}`, `{change summary}`, `{file list}`,
 from earlier steps):
 
 1. `han-core:test-engineer` — "Analyze test coverage for the following files{if branch available: ' on branch
-   {branch}'}: {file list}. Focus your analysis on these files and their related test files. Write your output to
-   {output_directory}/test-plan.md"
+   {branch}'}: {file list}. Focus your analysis on these files and their related test files."
 
 2. `han-core:edge-case-explorer` — "Explore edge cases for the following files{if branch available: ' on branch
-   {branch}'}: {file list}. Focus your analysis on these files and their inputs, integration points, and error paths.
-   Write your output to {output_directory}/edge-case-analysis.md"
+   {branch}'}: {file list}. Focus your analysis on these files and their inputs, integration points, and error paths."
 
 3. `han-core:adversarial-security-analyst` — "Perform adversarial security analysis on the following files{if branch
    available: ' on branch {branch}'}: {file list}. Locate all dependency manifests in the project (package.json,
-   requirements.txt, go.mod, Gemfile, *.lock, pom.xml, build.gradle) and include them in your analysis. Write your
-   output to {output_directory}/security-analysis.md"
+   requirements.txt, go.mod, Gemfile, *.lock, pom.xml, build.gradle) and include them in your analysis."
 
 4. `han-core:structural-analyst` — "Analyze the static structure of the following files{if branch available: ' on branch
    {branch}'}: {file list}. Focus on coupling across module seams, dependency direction, duplication, and missing or
-   leaky abstractions introduced or worsened by these changes. Write your output to
-   {output_directory}/structural-analysis.md"
+   leaky abstractions introduced or worsened by these changes."
 
 5. `han-core:behavioral-analyst` — "Analyze runtime behavior for the following files{if branch available: ' on branch
    {branch}'}: {file list}. Focus on data flow across module boundaries, error propagation and loss, state-management
-   hazards, and integration-boundary assumptions that these changes introduce or break. Write your output to
-   {output_directory}/behavioral-analysis.md"
+   hazards, and integration-boundary assumptions that these changes introduce or break."
 
 6. `han-core:junior-developer` (artifact-review mode) — "Review the following files{if branch available: ' on branch
    {branch}'} as a respected junior-to-mid teammate reading this code for the first time: {file list}. Surface hidden
    assumptions, muddied scope, unclear naming, baked-in prerequisites, and places where the change conflicts with
    existing coding standards, ADRs, or CLAUDE.md. Every finding must cite a specific file and line and either name the
-   assumption challenged or the standard violated. Write your output to {output_directory}/junior-developer-review.md"
+   assumption challenged or the standard violated."
 
 7. `han-core:concurrency-analyst` — "Analyze concurrency and async patterns for the following files{if branch available:
    ' on branch {branch}'}: {file list}. Focus on race conditions, lock ordering, shared-resource contention, deadlock
-   potential, and async error handling. Write your output to {output_directory}/concurrency-analysis.md"
+   potential, and async error handling."
 
 8. `han-core:data-engineer` — "Audit the following data-related files{if branch available: ' on branch {branch}'}: {file
    list}. Focus on the data-engineering principles violated by what this change actually introduces — schema-design fit,
    index strategy, migration safety, query correctness, data-contract evolution. Apply the calibration directive: do not
    raise findings for benign-outcome concerns like duplicate-create-index attempts where the storage layer is naturally
-   idempotent. Write your output to {output_directory}/data-analysis.md"
+   idempotent."
 
 9. `han-core:devops-engineer` — "Audit the following infrastructure and deployment files{if branch available: ' on
    branch {branch}'}: {file list}. Focus on production-readiness concerns this change actually introduces — rollout
    safety, observability coverage, scale and cost impact, secret handling. Apply the calibration directive: do not raise
-   findings for theoretical scale problems the project does not currently have. Write your output to
-   {output_directory}/devops-analysis.md"
+   findings for theoretical scale problems the project does not currently have."
 
 10. `han-core:on-call-engineer` — "Audit the following application source files{if branch available: ' on branch
     {branch}'} for the named code-level resilience anti-patterns that wake on-call engineers at 3am: {file list}. Focus
@@ -209,8 +204,7 @@ from earlier steps):
     code, eventual-consistency violations, data integrity hazards. Hard boundary: application source only — defer
     infrastructure, pipeline, IaC, observability platform, and alert configuration concerns to
     `han-core:devops-engineer`. Apply the calibration directive. Write every finding clear of the four named tone
-    anti-patterns (sugarcoated criticism, thin blame, tourist citation, bibliographic empathy).
-    Write your output to {output_directory}/on-call-analysis.md"
+    anti-patterns (sugarcoated criticism, thin blame, tourist citation, bibliographic empathy)."
 
 11. `han-core:observability-engineer` — "Audit the telemetry design in the following files{if branch available: ' on
     branch {branch}'}: {file list}. Focus on what the change actually introduces — metric label cardinality and
@@ -218,8 +212,27 @@ from earlier steps):
     could drop error or slow traces, telemetry pipeline processors and redaction, and signals emitted more than once.
     Defer SLOs, alert rules, and dashboards to `han-core:devops-engineer`, and source-line debuggability, correlation
     IDs, and PII in individual log statements to `han-core:on-call-engineer`. Apply the calibration directive: do not
-    recommend tail sampling, a Collector tier, or retention tiers for volume the project does not have. Write your
-    output to {output_directory}/observability-analysis.md"
+    recommend tail sampling, a Collector tier, or retention tiers for volume the project does not have."
+
+**Every prompt ends with the same hand-back sentence**, with `{Output file}` taken from the agent's roster-table row:
+
+> If you write your output to a file, write it to {output_directory}/{Output file} and name that path in your final
+> message. Otherwise, return your complete output, including every finding, as your final message, in any format.
+
+Some specialists have no tool that writes files, so a prompt never requires one.
+
+**File what each agent returns.** When an agent returns, record exactly one source for it in this run:
+
+- **A file the agent names.** When its final message names a file path and that file exists, record that file. The
+  agent named it in this run, so it is this run's output.
+- **Raw output.** Otherwise, write the returned message, in whatever format it came, to
+  `{output_directory}/{Output file}`, reading that file first when it already exists so the Write tool can replace it,
+  and record the file you wrote. A named file that does not exist falls back to this path.
+- **Not covered.** When the agent fails or returns nothing usable, write `Not covered in this run: {reason}` to
+  `{output_directory}/{Output file}` and record the agent as not covered.
+
+Step 7.1 reads only the sources recorded here in this run, never a file it did not record, so a rerun never reads an
+earlier run's output.
 
 ### Manual-only mode: when the dispatch mechanism fails
 
