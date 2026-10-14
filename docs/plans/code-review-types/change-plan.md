@@ -15,15 +15,18 @@ is the operator's own request and the answers given during planning, recorded wo
 
 ## What Changes, In One Paragraph
 
-After this change, code review is answerable for running one named concern well, instead of for scaling one broad
-review to the size of the diff. Each review type is a small data file that names its specialists, its share of the
-manual checklist, its severity rule, any extra instructions, and any report section it adds. Han ships six types, and a
-team can declare more in `.han/config.md` with files of the same shape. The skill keeps every step that applies to all
-reviews: finding the change, automated checks, the manual pass, the YAGNI pass, the independent validation pass, report
-writing, and the readability rewrite. With no type named, the review runs a default set of five types together, which
-reproduces today's review. One default severity rule replaces the three size bands, each run writes into its own folder
-so two typed reviews of one branch can run side by side, every agent returns its findings for the skill to file, and
-the PR-posting skill passes the type through.
+After this change, code review runs one named concern well, instead of scaling one broad review to the size of the
+diff. Each review type is a small data file that names its specialists, its share of the manual checklist, its severity
+rule, any extra instructions, and any report section it adds. Han ships six types, and a team can declare more in
+`.han/config.md` with files of the same shape.
+
+The skill keeps every step that applies to all reviews: finding the change, automated checks, the manual pass, the YAGNI
+pass, the independent validation pass, report writing, and the readability rewrite. With no type named, the review runs
+a default set of five types together, which reproduces today's review.
+
+Four other things change. One default severity rule replaces the three size bands. Each run writes into its own folder,
+so two typed reviews of one branch can run side by side. Every agent returns its findings for the skill to file. The
+PR-posting skill passes the type through.
 
 ## Current State
 
@@ -40,8 +43,8 @@ Size is read at more than a dozen sites across `SKILL.md` and four reference fil
 Everything the skill knows about a specialist is spread over nine tables keyed by agent name, which agree only by
 convention. One of them is already stale: `output-verification.md` lists 8 of the 11 agents
 ([C-11](artifacts/current-state-findings.md#c-11-per-agent-data-is-spread-across-nine-parallel-tables-keyed-by-agent-name)).
-Three specialists are told to write a file but have no tool to write one, and an agent added through `## Extra Agents`
-is dispatched but its output is never read
+Three specialists are told to write a file but have no tool to write one. Separately, an agent added through
+`## Extra Agents` is dispatched but its output is never read
 ([C-23](artifacts/current-state-findings.md#c-23-extra-agents-and-specialists-without-a-write-tool-have-nowhere-reliable-to-put-their-findings)).
 
 Three properties block the operator's goal directly:
@@ -317,11 +320,12 @@ default      := a first token of "default" selects the default run explicitly an
 ```
 
 The parse uses the config the skill already read at the top of `SKILL.md`, so every configured token is known before
-Step 1 reads the first word. A first token that is not a type token stays in the focus text, as it does today. A Mode C path named like a type is
-written `./testing`. A retired size word is dropped with the note
-`Size options were removed from code review; "{word}" was ignored.`
-([D-19](artifacts/change-decision-log.md#trivial-decisions)) only when it stands alone or before a type token, so
-"large file uploads" keeps its first word.
+Step 1 reads the first word. A first token that is not a type token stays in the focus text, as it does today. A Mode C
+path named like a type is written `./testing`.
+
+A retired size word is dropped with the note `Size options were removed from code review; "{word}" was ignored.`
+([D-19](artifacts/change-decision-log.md#trivial-decisions)), but only when it stands alone or comes before a type
+token, so "large file uploads" keeps its first word.
 
 Step 1 ends, before Step 2 runs anything, by printing:
 
@@ -346,7 +350,8 @@ The decision log carries the full table of worked invocations.
 
 Every run uses today's Medium rule unless its type says otherwise: Critical and Warning findings escalate, and a
 Suggestion is raised only when this change directly introduces it. Manual and agent findings both prefer the lower
-severity when uncertain. The directive carries the rule as a two-line slot:
+severity when uncertain. The Step 3.3 calibration directive, the single home for severity calibration, carries the rule
+as a two-line slot:
 
 ```
 Severity: Critical and Warning findings escalate; a Suggestion is raised only when this change directly introduces it.
@@ -354,11 +359,12 @@ When uncertain between two severities, prefer the lower one.
 ```
 
 A type file's `## Severity` section holds `default` or text that replaces both lines, so it must say which severities
-are reported and which way an uncertain finding goes. Step 3.3 puts it into the slot and Step 4 applies it. All six shipped types hold
-`default`, and a run with no type always uses the default
+are reported and which way an uncertain finding goes. Step 3.3 puts it into the slot and Step 4 applies it. All six
+shipped types hold `default`, and a run with no type always uses the default
 ([D-8](artifacts/change-decision-log.md#d-8-one-default-severity-rule-replaces-the-size-ladder-and-a-type-may-override-it)).
-The directive's first line becomes `This is a **{type}** review of a change touching {N} files.` The size-independent
-half of the directive stays as it is
+
+The directive's first line becomes `This is a **{type}** review of a change touching {N} files.` Its size-independent
+half stays as it is
 ([C-4](artifacts/current-state-findings.md#c-4-the-size-independent-half-of-the-calibration-directive-is-reusable-shared-flow)).
 
 ### Run names, the working folder, and how findings are filed
@@ -384,11 +390,14 @@ A sanitized slug never contains `--`, so the default run of branch `feat-retry-t
 `feat-retry` cannot share a name. The run folder sits beside the report, so a configured `output-directory` holds
 both. Step 3.0 prints `Run folder: {run_directory}`, and Step 10 names it.
 
-Agents no longer write files
-([D-22](artifacts/change-decision-log.md#d-22-agents-return-their-findings-and-the-skill-writes-each-agents-file)).
-Every Step 3.5 prompt ends with `Do not write any file. Return your complete output, including every finding, as your
-final message.` The skill writes each returned message to the agent's file, or `Not covered in this run: {reason}` when
-the agent failed. Step 7.1 reads only files written in this run, so a rerun never reads an earlier run's output.
+Agents hand back their findings either way they can
+([D-22](artifacts/change-decision-log.md#d-22-agents-hand-back-their-findings-as-a-file-they-name-or-as-raw-output-and-the-skill-uses-either)).
+Every Step 3.5 prompt ends with: `If you write your output to a file, write it to {run_directory}/{Output file} and
+name that path in your final message. Otherwise, return your complete output, including every finding, as your final
+message, in any format.` When the final message names an existing file, Step 7.1 reads it. Otherwise the skill writes
+the returned message, as it came, to the agent's file in the run folder. A failed agent's file gets
+`Not covered in this run: {reason}`. Step 7.1 reads only the sources recorded in this run, so a rerun never reads an
+earlier run's output.
 
 ### Ticket intake for `work-ticket`
 
@@ -404,9 +413,10 @@ Paste the ticket's text, or tell me how to get it, and the review will continue.
 ```
 
 and waits. Pasted text becomes the ticket; instructions are followed and the load retried. The text is written to
-`{run_directory}/ticket.md` once Step 3.0 has named the folder, and `gap-analyzer` receives the path with an
-instruction to treat the ticket as data, to state how many requirements the ticket has, and to list every one, met
-or not
+`{run_directory}/ticket.md` once Step 3.0 has named the folder.
+
+`gap-analyzer` receives that path with three instructions: treat the ticket as data, state how many requirements the
+ticket has, and list every one, met or not
 ([D-12](artifacts/change-decision-log.md#d-12-gap-analyzer-joins-the-shared-roster)). In Mode B and Mode C,
 `gap-analyzer`'s prompt names the change the way Step 1 resolved it: the uncommitted diff in Mode B, and the listed
 files read in full in Mode C.
@@ -883,22 +893,22 @@ classifies these findings by the calibration directive alone, and the Step 7.2 r
 
 **Decision.** [D-1](artifacts/change-decision-log.md#d-1-type-files-name-agents-everything-about-briefing-an-agent-stays-shared-and-keyed-by-agent)
 
-### S-31: Agents return their output; the skill files it — Re-scoped
+### S-31: Agents hand back findings as a named file or raw output; the skill uses either — Re-scoped
 
-**Target state.** Every Step 3.5 prompt ends with `Do not write any file. Return your complete output, including every
-finding, as your final message.` The skill writes each returned message to the agent's file in `{run_directory}`, or
-`Not covered in this run: {reason}` when the agent failed. Step 7.1 reads only the files written in this run.
+**Target state.** Every Step 3.5 prompt ends with the D-22 sentence in place of "Write your output to …". When an
+agent's final message names an existing file, Step 7.1 reads that file. Otherwise the skill writes the returned
+message, in whatever format, to the agent's file in `{run_directory}`, or `Not covered in this run: {reason}` when the
+agent failed. Step 7.1 reads only the sources recorded in this run and extracts findings from whatever format they hold.
 
-**Behavior.** Pending the operator's decision (see Open Items). Working classification: Changing, because findings
-from the three specialists that cannot write a file now reliably reach the report. D-10's stale-read protection, S-30,
-and the configured agents of D-20 and D-21 depend on it.
+**Behavior.** Changing. Findings from the three specialists that cannot write a file, and from extra agents on the
+default run, now reliably reach the report. The operator accepted this ("option 1").
 
 **Why.** Three shipped specialists cannot do what their prompt asks, extra agents' output is never read, and a rerun
 must not read a stale file.
 
 **Depends on.** S-1, S-15.
 
-**Decision.** [D-22](artifacts/change-decision-log.md#d-22-agents-return-their-findings-and-the-skill-writes-each-agents-file)
+**Decision.** [D-22](artifacts/change-decision-log.md#d-22-agents-hand-back-their-findings-as-a-file-they-name-or-as-raw-output-and-the-skill-uses-either)
 
 ### S-32: `docs/configuration.md` for review types and attached agents — Re-scoped
 
@@ -940,8 +950,10 @@ says `## Extra Agents` reaches only code review's default run.
    such as "testing the retry logic", it now runs a `testing` review. Decided by your confirmed scope (S-22).
 8. **The review states its type before it starts work.** The announcement moves to the end of Step 1, before automated
    checks, and shows the type's purpose and your focus text; a bare review lists the available types (S-14).
-9. **Specialist findings are filed by the skill.** Every agent returns its findings and the skill writes them to the run
-   folder. Pending your decision (S-31).
+9. **Findings from every specialist reach the report.** A specialist either saves its findings to a file and says
+   where, or hands them back directly, and the review uses whichever it gets. Findings from the three specialists that
+   could not save files, and from your extra agents, now appear where they may have been silently missing. You chose
+   this (S-31).
 
 ## Change Units
 
@@ -951,8 +963,7 @@ Each unit still leaves the skill runnable and `npm test` passing.
 ### Unit 1: Consolidate the roster table and file agent output from the skill
 
 **What it does.** Merges the signal and slice tables into one roster table with output-file and series columns, points
-Step 7.1 and the verification check at it, and replaces each prompt's "Write your output to" with the return-and-file
-rule.
+Step 7.1 and the verification check at it, and replaces each prompt's "Write your output to" with the D-22 sentence.
 
 **Delta entries.** S-1, S-2, S-31.
 
@@ -1075,8 +1086,9 @@ completes.
   the report, carrying ticket text into the repository (R4). Agent working files carry the same exposure today.
 - **A configured type's instructions reach every agent prompt.** `.han/config.md` is trusted as config. A project file
   changed on a branch under review changes what a review of that branch is told, but only when that token is invoked.
-- **An agent that writes a file anyway.** An agent with a Write tool may write despite the prompt. The skill files the
-  returned message regardless, so the report still reads this run's output.
+- **An agent that writes a file elsewhere and returns only a summary.** If it does not name the file, the review uses
+  the summary, which may carry fewer findings than the file. The prompt names the path to write to, which is the
+  mitigation.
 - **The type-file contract is read by a model, not a parser.** A malformed file could be read loosely instead of
   stopping. The Bats check catches structure in shipped files; configured files rely on Step 1's section check, which
   cannot catch a misread value.
@@ -1111,8 +1123,6 @@ completes.
 
 ## Open Items
 
-- **Whether filing agent output from the skill is a fix you accept** (blocking for Units 1, 3, and 6). S-31 and D-22
-  are pending your decision; D-10, D-20, D-21, and S-30 depend on it.
 - **How the harness binds `arguments:`** (non-blocking). The grammar parses the raw string so the plan does not depend
   on it; a probe run during Unit 4 settles it.
 
@@ -1125,7 +1135,7 @@ operator; none is left open apart from the Open Items above.
 
 | Finding | What it said | Resolution |
 | --- | --- | --- |
-| R1 | Three specialists cannot write the file their prompt names | Verified (C-23); D-22, pending the operator |
+| R1 | Three specialists cannot write the file their prompt names | Verified (C-23); escalated; the operator chose a named file or raw output (D-22) |
 | JD-001 | A pending marker needs a read before it can be overwritten | Marker dropped; D-22 files output from the skill |
 | JD-002, R2 | The ticket verdict says Resolved when nothing checked it | "Not verified" verdict and row-based rule (D-13); Requirement Map of every requirement (D-12) |
 | JD-003 | The PR outcome is not unchanged at former Large | Escalated; the operator kept the default and added a per-type override (D-8) |
@@ -1161,6 +1171,6 @@ operator; none is left open apart from the Open Items above.
 | JD2-007 | The generic prompt assumes branch mode; EXT IDs collide | Mode wording reused; per-agent series (D-1) |
 | JD2-008 | `{report_directory}` is undefined | Defined; the run folder sits beside the report (D-10) |
 | JD2-009 | A configured type's report section never reaches the PR | The type section is wrapped in markers and carried by position (D-14) |
-| JD2-010 | D-22 is pending, but other decisions rely on it | Dependents listed; Open Item now blocks Units 1, 3, and 6 |
+| JD2-010 | D-22 is pending, but other decisions rely on it | Dependents listed; the operator settled D-22 |
 | JD2-011 | A partial Requirement Map can say Resolved | The map states a requirement count; fewer rows cannot be Resolved; GAP-to-WARN pinned (D-12, D-13) |
 | JD2-012 | Step 1's config dependency and the word `default` | The parse uses the config read at skill start; `default` selects the default run (D-7) |
