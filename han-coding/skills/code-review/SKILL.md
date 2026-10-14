@@ -196,8 +196,43 @@ runtime-behavior risks, concurrency hazards, and clarity issues — they do not 
 applies only to Step 2's automated checks.) The brief-scoping rules below keep agents from producing findings
 disproportionate to the change.
 
-Determine the output directory for agent reports: if the project has an existing documentation folder (e.g., `docs/`),
-use it; otherwise use the current working directory.
+### Step 3.0: Name the run and its folder
+
+Name the run before anything is dispatched, so every agent's output is filed in a folder no other run uses.
+
+**Resolve `{report_directory}` in this order:**
+
+1. **A configured `output-directory`.** When the config read at the top of this skill supplied one, use it.
+   Relative-path resolution, `~` expansion, and precedence between the personal and project files are governed by
+   [config-rule.md](../../references/config-rule.md); do not re-derive them here.
+2. **No configured value.** Use the project's existing documentation folder (e.g., `docs/`) when there is one, and the
+   current working directory otherwise. This is also the fallback Step 8.6 uses when the first destination cannot be
+   written.
+
+**Resolve `{slug}`**, which identifies what this run covered:
+
+- **The ticket**, when Step 1.5's branch context surfaced a ticket identifier the branch name does not already carry.
+- **The branch**, otherwise, in Mode A and Mode B.
+- **What was reviewed**, when the branch does not distinguish this run — a review against the default branch, or a Mode
+  C run with no branch at all. Use the single file, directory, or symbol when there is one, and the common parent of the
+  reviewed files when there is not. NEVER use a branch name that does not distinguish the run, BECAUSE a name that does
+  not say what a report covers is the collision this naming exists to remove.
+
+Then sanitize it: lowercase it, replace each run of characters outside `[a-z0-9]` with one `-`, and trim `-` from both
+ends. An empty result becomes `review`. A sanitized slug never contains `--`, and no query string, `#`, `/`, or `..`
+reaches a file name.
+
+**Name the run and its folder:**
+
+```
+{run_name}      = code-review-{slug}
+{run_directory} = {report_directory}/{run_name}/
+agent file      = {run_directory}/{Output file from the roster table}
+report          = {report_directory}/{run_name}.md
+```
+
+Print `Run folder: {run_directory}`. A rerun of the same run reuses its folder; Step 3.5 records each agent's source in
+this run, so the rerun never reads the earlier run's files.
 
 ### Step 3.1: Summarize the change
 
@@ -403,30 +438,16 @@ keep the fact.
 
 ## Step 8.6: Write the Report File
 
-The review is a file, not a conversation message. Resolve where it goes, name it for what it covers, and write it.
+The review is a file, not a conversation message. Write it under the name Step 3.0 gave this run.
 
-**Resolve the directory in this order:**
-
-1. **A configured `output-directory`.** When the config read at the top of this skill supplied one, write the report
-   beneath it. Relative-path resolution, `~` expansion, and precedence between the personal and project files are
-   governed by [config-rule.md](../../references/config-rule.md); do not re-derive them here.
-2. **No configured value.** Write it to the `{output_directory}` Step 3 already resolved for the specialists' reports,
-   BECAUSE splitting the report from the analysis it was built on makes a run's output harder to find, not easier.
-
-**Name the file `code-review-{slug}.md`**, where `{slug}` identifies what this run covered:
-
-- **The ticket**, when Step 1.5's branch context surfaced a ticket identifier the branch name does not already carry.
-- **The branch**, otherwise, in Mode A and Mode B.
-- **What was reviewed**, when the branch does not distinguish this run — a review against the default branch, or a Mode
-  C run with no branch at all. Use the single file, directory, or symbol when there is one, and the common parent of the
-  reviewed files when there is not. NEVER use a branch name that does not distinguish the run, BECAUSE a name that does
-  not say what a report covers is the collision this naming exists to remove.
+Write the report to `{report_directory}/{run_name}.md`, using the names Step 3.0 resolved. Do not derive the slug
+again here.
 
 **When a report already exists at that name, replace it** and record that you did, plus the name you replaced, for Step
 10's message. Keeping both would leave two reports for one branch with nothing in their names to say which is current.
 Saying so is what protects someone still working the earlier report as a queue.
 
-**When the resolved directory cannot be written**, write to the fallback in 2 instead and record which destination you
+**When the resolved directory cannot be written**, write to the fallback in Step 3.0's second item instead and record which destination you
 could not use, for the same message. NEVER abandon the run over this: the review is finished by the time it is written,
 and losing all of it to a missing directory is the worse outcome.
 
@@ -447,8 +468,8 @@ report yet.
 1. **The recommendation**, in the words the report's own Review Recommendation uses.
 2. **The counts by severity** — critical, warning, suggestion. Name any YAGNI count separately, never folded into the
    total.
-3. **The path** to the report file. Name the report you replaced when Step 8.6 replaced one, and the destination you
-   could not use when it fell back.
+3. **The path** to the report file, and the run folder that holds the specialists' working files. Name the report you
+   replaced when Step 8.6 replaced one, and the destination you could not use when it fell back.
 4. **The run's own facts, last:** the validator reconciliation line. In manual-only mode,
    one clause: agent dispatch was unavailable, so no specialist read this change; how many coverage areas were swept by
    hand and how many were not; and a pointer to the report's Review Coverage section. Name the cause and the

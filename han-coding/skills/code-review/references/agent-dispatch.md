@@ -210,7 +210,7 @@ from earlier steps):
 
 **Every prompt ends with the same hand-back sentence**, with `{Output file}` taken from the agent's roster-table row:
 
-> If you write your output to a file, write it to {output_directory}/{Output file} and name that path in your final
+> If you write your output to a file, write it to {run_directory}/{Output file} and name that path in your final
 > message. Otherwise, return your complete output, including every finding, as your final message, in any format.
 
 Some specialists have no tool that writes files, so a prompt never requires one.
@@ -220,10 +220,10 @@ Some specialists have no tool that writes files, so a prompt never requires one.
 - **A file the agent names.** When its final message names a file path and that file exists, record that file. The
   agent named it in this run, so it is this run's output.
 - **Raw output.** Otherwise, write the returned message, in whatever format it came, to
-  `{output_directory}/{Output file}`, reading that file first when it already exists so the Write tool can replace it,
+  `{run_directory}/{Output file}`, reading that file first when it already exists so the Write tool can replace it,
   and record the file you wrote. A named file that does not exist falls back to this path.
 - **Not covered.** When the agent fails or returns nothing usable, write `Not covered in this run: {reason}` to
-  `{output_directory}/{Output file}` and record the agent as not covered.
+  `{run_directory}/{Output file}` and record the agent as not covered.
 
 Step 7.1 reads only the sources recorded here in this run, never a file it did not record, so a rerun never reads an
 earlier run's output.
