@@ -45,7 +45,7 @@ to use the skill. For what the skill does internally, read the skill definition 
 - **Size-aware agent dispatch.** Two agents always run on every review (`junior-developer` for clarity and standards,
   `adversarial-security-analyst` for exploit-path security). The rest of the roster (`test-engineer`,
   `edge-case-explorer`, `structural-analyst`, `behavioral-analyst`, `concurrency-analyst`, `data-engineer`,
-  `devops-engineer`, `on-call-engineer`) is dispatched conditionally based on what the changed files touch. Larger sizes
+  `devops-engineer`, `on-call-engineer`, `observability-engineer`) is dispatched conditionally based on what the changed files touch. Larger sizes
   raise the upper bound on the roster; smaller sizes prefer fewer agents producing higher-signal findings. See the
   [Sizing](#sizing) section below.
 - **Calibration directive.** Every dispatched agent receives a calibration directive that requires findings to be either
@@ -477,6 +477,10 @@ URL: https://itrevolution.com/product/accelerate/
   application source with runtime resilience surface (outbound calls, retry logic, queue/buffer handling, async/await
   code, error-handling on failure paths, idempotency, schema migrations co-deployed with dependent code, new production
   code paths). Hard boundary against `devops-engineer`: this agent reads application source only.
+- [`observability-engineer`](../../../han-core/docs/agents/observability-engineer.md). Conditional dispatch when the
+  change adds or alters telemetry design: metric instruments or labels, span attributes, log schemas, OpenTelemetry SDK
+  setup, or telemetry pipeline configuration. SLOs, alert rules, and dashboards stay with `devops-engineer`;
+  source-line debuggability stays with `on-call-engineer`.
 - [`adversarial-validator`](../../../han-core/docs/agents/adversarial-validator.md). Dispatched once at Step 7.4 to re-attack
   the consolidated finding list against the code and confirm, demote, or drop each finding. Runs whenever the review
   produced at least one corrective finding.
