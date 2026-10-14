@@ -6,7 +6,7 @@ description: >
   GitHub as PR comments. For local code review without posting to GitHub, use code-review instead. Does not write or
   update PR descriptions — use update-pr-description for that.
 argument-hint:
-  "[type: security | testing | architecture | data | observability | resilience | release | maintainability |
+  "[type: security | testing | architecture | data | observability | resilience | release | maintainability | docs |
   work-ticket <ticket> | a type from .han/config.md] [focus]"
 allowed-tools:
   Bash(jq *), Bash(gh *), Bash(git *), Bash(make *), Bash(npm *), Read, Write, Grep, Glob, Skill, Agent,

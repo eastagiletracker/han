@@ -3,15 +3,15 @@ name: code-review
 description:
   'Run a comprehensive code review on local source files. Use this skill when the user asks to review, audit, inspect,
   evaluate, or check code, even if they never use the word "review." Name a review type (security, testing,
-  architecture, data, observability, resilience, release, maintainability, work-ticket with a ticket, or one declared in
-  .han/config.md) to focus on one concern, or omit it for the default review. Does not post comments to GitHub pull
-  requests — use post-code-review-to-pr for that. Does not analyze architectural structure or module boundaries — use
-  architectural-analysis for that. Does not explain code or a PR to build understanding before reviewing — use
-  code-overview for a written overview, or code-walkthrough to be paced through it one step at a time. Does not map
-  bounded contexts or domain boundaries — use ddd-analysis for that. Does not capture feedback on Han''s own skills —
-  use han-feedback for that.'
+  architecture, data, observability, resilience, release, maintainability, docs, work-ticket with a ticket, or one
+  declared in .han/config.md) to focus on one concern, or omit it for the default review. Does not post comments to
+  GitHub pull requests — use post-code-review-to-pr for that. Does not analyze architectural structure or module
+  boundaries — use architectural-analysis for that. Does not explain code or a PR to build understanding before
+  reviewing — use code-overview for a written overview, or code-walkthrough to be paced through it one step at a time.
+  Does not map bounded contexts or domain boundaries — use ddd-analysis for that. Does not capture feedback on Han''s
+  own skills — use han-feedback for that.'
 argument-hint:
-  "[type: security | testing | architecture | data | observability | resilience | release | maintainability |
+  "[type: security | testing | architecture | data | observability | resilience | release | maintainability | docs |
   work-ticket <ticket> | a type from .han/config.md] [focus areas, or file paths in Mode C]"
 allowed-tools:
   Bash(git *), Bash(gh *), Bash(make *), Bash(npm *), Read, Write, Grep, Glob, Agent,
@@ -98,23 +98,25 @@ order in [review-checklist.md](./references/review-checklist.md).
 A review type names the one concern a run covers. Each shipped type is a data file under `references/types/`, and this
 table is the only list of shipped type tokens:
 
-| Token             | File                                                                         | Purpose                                                   |
-| ----------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `security`        | [references/types/security.md](./references/types/security.md)               | Whether the change opens an exploitable path              |
-| `testing`         | [references/types/testing.md](./references/types/testing.md)                 | Test coverage and edge cases of the change                |
-| `architecture`    | [references/types/architecture.md](./references/types/architecture.md)       | Module structure, dependency direction, runtime flow      |
-| `data`            | [references/types/data.md](./references/types/data.md)                       | Schemas, migrations, queries, and regulated data          |
-| `observability`   | [references/types/observability.md](./references/types/observability.md)     | Telemetry design and whether failures are visible         |
-| `resilience`      | [references/types/resilience.md](./references/types/resilience.md)           | Whether the code survives production failures             |
-| `release`         | [references/types/release.md](./references/types/release.md)                 | Whether the change ships and rolls back safely            |
-| `maintainability` | [references/types/maintainability.md](./references/types/maintainability.md) | Clarity, naming, and fit with the project's own standards |
-| `work-ticket`     | [references/types/work-ticket.md](./references/types/work-ticket.md)         | Whether the change resolves a named work ticket           |
+| Token             | File                                                                         | Purpose                                                    |
+| ----------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `security`        | [references/types/security.md](./references/types/security.md)               | Whether the change opens an exploitable path               |
+| `testing`         | [references/types/testing.md](./references/types/testing.md)                 | Test coverage and edge cases of the change                 |
+| `architecture`    | [references/types/architecture.md](./references/types/architecture.md)       | Module structure, dependency direction, runtime flow       |
+| `data`            | [references/types/data.md](./references/types/data.md)                       | Schemas, migrations, queries, and regulated data           |
+| `observability`   | [references/types/observability.md](./references/types/observability.md)     | Telemetry design and whether failures are visible          |
+| `resilience`      | [references/types/resilience.md](./references/types/resilience.md)           | Whether the code survives production failures              |
+| `release`         | [references/types/release.md](./references/types/release.md)                 | Whether the change ships and rolls back safely             |
+| `maintainability` | [references/types/maintainability.md](./references/types/maintainability.md) | Clarity, naming, and fit with the project's own standards  |
+| `docs`            | [references/types/docs.md](./references/types/docs.md)                       | Whether docs can be found and followed, with no lost facts |
+| `work-ticket`     | [references/types/work-ticket.md](./references/types/work-ticket.md)         | Whether the change resolves a named work ticket            |
 
 ```
 Default (no type token): security, testing, architecture, data, observability, resilience, release, maintainability
 Default always-run agents: han-core:junior-developer, han-core:adversarial-security-analyst
 Every other agent in the default set's rosters: dispatched only when its roster signal fires
 Also on the default run, under the same signal rule: agents .han/config.md attaches to a default-set type, and ## Extra Agents
+Shipped but outside the default set: docs, work-ticket; each runs only when named
 More types: declared under ## Code Review Types in .han/config.md; never part of the default run
 ```
 

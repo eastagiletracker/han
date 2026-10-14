@@ -11,6 +11,8 @@
 - Processing on-call-engineer results (only if dispatched)
 - Processing observability-engineer results (only if dispatched)
 - Processing junior-developer results
+- Processing information-architect results (only if dispatched)
+- Processing content-auditor results (only if dispatched)
 - Processing gap-analyzer results (only if dispatched)
 - Processing results from an agent without a roster-table row
 
@@ -185,6 +187,34 @@ severity:
 
 Do not duplicate a junior-developer finding when another agent has already raised the same issue — prefer the
 specialist's classification and reference it from the JD finding instead.
+
+### Processing information-architect results (only if dispatched)
+
+For each information-architect finding (IA1, IA2, ...), assign category **[Documentation: Findability]** and classify
+severity:
+
+- **CRIT**: Never, unless the finding meets the calibration directive's critical cases. A hard-to-find document is not
+  data loss.
+- **WARN**: A structural problem the change introduces that stops a named reader from finding or following what the
+  change documents — a new document nothing links to, a broken internal cross-reference, a label that names one thing
+  in two ways, or a front door that no longer routes to the content it moved.
+- **SUGG**: Orientation polish on documents the change touches — headings, ordering, progressive disclosure.
+
+Reject findings about documents the change does not touch, and any finding that is a prose rewrite rather than a
+structural change.
+
+### Processing content-auditor results (only if dispatched)
+
+For each missing fact the content-auditor reports (CA1, CA2, ...), assign category **[Documentation: Lost Fact]** and
+classify severity:
+
+- **CRIT**: Never, unless the finding meets the calibration directive's critical cases.
+- **WARN**: A fact the original carried that a reader needs to act correctly — a command, a configuration value, a
+  constraint, a warning, or a step — and the updated document no longer carries, with no other document carrying it.
+- **SUGG**: A lost fact a reader could recover from elsewhere in the repository, or a specific value the update
+  replaced with a generic description.
+
+Drop facts the auditor classified as present or correctly removed; they produce no findings.
 
 ### Processing gap-analyzer results (only if dispatched)
 
