@@ -97,8 +97,8 @@ The flow it keeps, with what moves:
 
 ### The type-file contract
 
-Every type file has six sections in a fixed order, and a section with nothing to say holds `none`
-([D-3](artifacts/change-decision-log.md#d-3-the-type-file-contract-is-six-fixed-sections)):
+Every type file has seven sections in a fixed order, and a section with nothing to say holds `none`
+([D-3](artifacts/change-decision-log.md#d-3-the-type-file-contract-is-seven-fixed-sections)):
 
 | Section                   | Value form                                                                    | Read at          |
 | ------------------------- | ----------------------------------------------------------------------------- | ---------------- |
@@ -106,6 +106,7 @@ Every type file has six sections in a fixed order, and a section with nothing to
 | `## Required input`       | `none`, or `- name:`, `- accepts:`, `- binds:`, `- slug:` bullets             | Steps 1, 1.6     |
 | `## Roster`               | `- Always:` agent list; `- When relevant:` agent list or `none`               | Step 3.2         |
 | `## Checklist categories` | bold category names from `review-checklist.md`, or `none`                     | Step 4           |
+| `## Severity`             | `default`, or one sentence replacing the default severity rule                | Steps 3.3, 4     |
 | `## Instructions`         | `none`, or one blockquote appended to every agent prompt and applied to Step 4 | Steps 3.5, 4     |
 | `## Report section`       | `none`, or one fenced section layout rendered after Review Recommendation     | Step 8           |
 
@@ -136,6 +137,10 @@ Verify that the change on this branch resolves the named work ticket.
 
 Correctness, Testing
 
+## Severity
+
+default
+
 ## Instructions
 
 > This is a work-ticket review. The question is whether the change delivers what the ticket asks. A ticket requirement
@@ -160,7 +165,7 @@ Divergent; Partially resolved otherwise.
 
 The other five type files follow the same layout. Their rosters and checklist categories are in
 [D-4](artifacts/change-decision-log.md#d-4-the-first-set-of-types); their `Required input`, `Instructions`, and
-`Report section` are `none`.
+`Report section` are `none`, and their `Severity` is `default`.
 
 ### The argument grammar
 
@@ -186,11 +191,14 @@ the note `Size options were removed from code review; "{word}" was ignored.`
 `Review type: {token or "default"} ({"passed as first argument" | "no type given"})` before dispatch, so a mistyped
 token shows up before any agent runs. The decision log carries the full table of worked invocations.
 
-### One severity rule
+### One default severity rule, which a type may override
 
-Every run uses today's Medium rule: Critical and Warning findings escalate, and a Suggestion is raised only when this
-change directly introduces it. Manual and agent findings both prefer the lower severity when uncertain
-([D-8](artifacts/change-decision-log.md#d-8-one-severity-rule-replaces-the-size-ladder)). The directive's first line
+Every run uses today's Medium rule unless its type says otherwise: Critical and Warning findings escalate, and a
+Suggestion is raised only when this change directly introduces it. Manual and agent findings both prefer the lower
+severity when uncertain. A type file's `## Severity` section holds `default` or one sentence that replaces the rule for
+that type; Step 3.3 puts it into the calibration directive and Step 4 applies it. All six first types hold `default`,
+and a run with no type always uses the default
+([D-8](artifacts/change-decision-log.md#d-8-one-default-severity-rule-replaces-the-size-ladder-and-a-type-may-override-it)). The directive's first line
 becomes `This is a **{type}** review of a change touching {N} files.` The size-independent half of the directive stays
 as it is
 ([C-4](artifacts/current-state-findings.md#c-4-the-size-independent-half-of-the-calibration-directive-is-reusable-shared-flow)).
@@ -282,20 +290,23 @@ confirmation turn.
 
 ### S-4: Severity calibration in the Step 3.3 directive — Re-scoped
 
-**Target state.** The Step 3.3 calibration directive carries one severity rule for every run: Critical and Warning
+**Target state.** The Step 3.3 calibration directive carries the type's `## Severity` sentence when it is not
+`default`, and otherwise one default rule: Critical and Warning
 findings escalate, and a Suggestion is raised only when this change directly introduces it. It remains the single
 authoritative home for severity calibration. The Review Constraints preamble, the Mode B and Mode C note, the Step 7.3
 heading, the validator brief in `finding-filters.md`, the YAGNI wording in `review-checklist.md`, and Step 10 point at
 it without naming a size.
 
 **Behavior.** Changing. Former Small runs gain Suggestions the change introduced. Former Large runs lose pre-existing
-Suggestions. Manual findings no longer prefer the higher severity at any size. The operator chose this rule.
+Suggestions, and their uncertain Warnings become Suggestions, so a PR review can post `COMMENT` where it posted
+`REQUEST_CHANGES`. Manual findings no longer prefer the higher severity at any size. The operator chose this rule and
+the per-type override.
 
 **Why.** Size is gone, so one rule has to replace the ladder.
 
 **Depends on.** S-3.
 
-**Decision.** [D-8](artifacts/change-decision-log.md#d-8-one-severity-rule-replaces-the-size-ladder)
+**Decision.** [D-8](artifacts/change-decision-log.md#d-8-one-default-severity-rule-replaces-the-size-ladder-and-a-type-may-override-it)
 
 ### S-5: Argument grammar (frontmatter and Step 1 parse) — Re-scoped
 
@@ -326,9 +337,9 @@ run needs a named set.
 
 ### S-7: The type-file contract — Added
 
-**Target state.** Every file in `references/types/` has a `# Review type: {token}` title and the six sections Purpose,
-Required input, Roster, Checklist categories, Instructions, and Report section, in that order, each holding a value of
-the pinned form or `none`. Step 3.1 stops with `Review type file {path} is missing section "{name}"` when one is absent.
+**Target state.** Every file in `references/types/` has a `# Review type: {token}` title and the seven sections Purpose,
+Required input, Roster, Checklist categories, Severity, Instructions, and Report section, in that order, each holding a
+value of the pinned form, `none`, or (for Severity) `default`. Step 3.1 stops with `Review type file {path} is missing section "{name}"` when one is absent.
 
 **Behavior.** Preserving (new structure).
 
@@ -336,7 +347,7 @@ the pinned form or `none`. Step 3.1 stops with `Review type file {path} is missi
 
 **Depends on.** S-6.
 
-**Decision.** [D-3](artifacts/change-decision-log.md#d-3-the-type-file-contract-is-six-fixed-sections)
+**Decision.** [D-3](artifacts/change-decision-log.md#d-3-the-type-file-contract-is-seven-fixed-sections)
 
 ### S-8: `references/types/security.md` — Added
 
@@ -567,7 +578,7 @@ and 6 are unchanged.
 ### S-24: `scripts/review-types.bats` — Added
 
 **Target state.** A Bats file beside `detect-review-context.bats` checks four agreements: every type file and its table
-row and hint token; every type file's title and six sections in order; every rostered agent's roster-table row and
+row and hint token; every type file's title and seven sections in order; every rostered agent's roster-table row and
 prompt; and the default set's checklist union against `review-checklist.md`.
 
 **Behavior.** Preserving (test only).
@@ -589,7 +600,7 @@ selected", and the sweep rows carry no size. The absent-coverage list is still w
 
 **Depends on.** S-4, S-13.
 
-**Decision.** [D-1](artifacts/change-decision-log.md#d-1-type-files-name-agents-everything-about-briefing-an-agent-stays-shared-and-keyed-by-agent), [D-8](artifacts/change-decision-log.md#d-8-one-severity-rule-replaces-the-size-ladder)
+**Decision.** [D-1](artifacts/change-decision-log.md#d-1-type-files-name-agents-everything-about-briefing-an-agent-stays-shared-and-keyed-by-agent), [D-8](artifacts/change-decision-log.md#d-8-one-default-severity-rule-replaces-the-size-ladder-and-a-type-may-override-it)
 
 ### S-26: Operator docs for code review and the PR skill — Re-scoped
 
@@ -604,7 +615,7 @@ longer describes a size-aware roster. `CHANGELOG.md` records every Behavior Chan
 
 **Depends on.** S-3 to S-25.
 
-**Decision.** [D-4](artifacts/change-decision-log.md#d-4-the-first-set-of-types), [D-8](artifacts/change-decision-log.md#d-8-one-severity-rule-replaces-the-size-ladder), [D-10](artifacts/change-decision-log.md#d-10-each-run-gets-its-own-working-folder-and-a-typed-report-name)
+**Decision.** [D-4](artifacts/change-decision-log.md#d-4-the-first-set-of-types), [D-8](artifacts/change-decision-log.md#d-8-one-default-severity-rule-replaces-the-size-ladder-and-a-type-may-override-it), [D-10](artifacts/change-decision-log.md#d-10-each-run-gets-its-own-working-folder-and-a-typed-report-name)
 
 ## Behavior Changes
 
@@ -615,7 +626,10 @@ longer describes a size-aware roster. `CHANGELOG.md` records every Behavior Chan
    your request and the confirmed scope (S-3, S-20).
 3. **Minor suggestions change.** A review of one to three files now lists suggestions the change introduced, where it
    used to hide them. A review of more than ten files no longer lists old suggestions the change did not cause. PR
-   reviews still request changes on exactly the same findings. You chose this rule (S-4).
+   A borderline issue on a change of more than ten files used to be a warning and is now a
+   suggestion, so a PR review whose only warnings were borderline posts as a comment instead of requesting changes.
+   Clear-cut problems still block. You chose this default, and a review type can set its own rule when it needs to
+   (S-4).
 4. **A focused review skips security, without saying so.** `/code-review testing` runs no security check, and its
    report does not mention that. A bare `/code-review` still runs security. You decided this (S-8, S-13).
 5. **Agent working files move into a folder per run, and typed reports get a suffix.** For example
@@ -740,8 +754,6 @@ and the CHANGELOG entry listing every Behavior Changes item.
   file locally.
 - **A type registry or index file.** It would duplicate the `## Review Types` table. Reopen if `SKILL.md` can no longer
   link every type file.
-- **A severity band per type.** Reopen when a type's output is measured as too noisy or too sparse under the single
-  rule.
 - **Several named types in one invocation.** Parallel runs deliver this, and the default already combines types. Reopen
   when an operator records friction from launching runs separately.
 - **A configurable default type.** Not requested. Reopen on request.

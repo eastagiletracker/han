@@ -72,10 +72,10 @@ The plan itself lives in [../change-plan.md](../change-plan.md). Evidence about 
 - **Dependent decisions:** D-3, D-7, D-16
 - **Referenced in plan:** Target State, Surface Delta
 
-### D-3: The type-file contract is six fixed sections
+### D-3: The type-file contract is seven fixed sections
 
 - **Question:** What does a type file contain, in a form `SKILL.md` reads the same way every time?
-- **Decision:** Every `references/types/{token}.md` has a `# Review type: {token}` title and these six `##` sections,
+- **Decision:** Every `references/types/{token}.md` has a `# Review type: {token}` title and these seven `##` sections,
   in this order. A section with nothing to say holds the literal word `none`. Step 3.1 stops with
   `Review type file {path} is missing section "{name}"` when a section is absent.
 
@@ -85,6 +85,7 @@ The plan itself lives in [../change-plan.md](../change-plan.md). Evidence about 
   | `## Required input`       | `none`, or the four bullets `- name:`, `- accepts:`, `- binds:`, `- slug:`                   | Step 1, Step 1.6 |
   | `## Roster`               | `- Always:` comma list of agent names; `- When relevant:` comma list or `none`               | Step 3.2         |
   | `## Checklist categories` | comma list of bold category names from `review-checklist.md`, or `none`                      | Step 4           |
+  | `## Severity`              | `default`, or one sentence that replaces the D-8 default rule for this type's runs           | Step 3.3, Step 4 |
   | `## Instructions`         | `none`, or one blockquote appended to every agent prompt after the binding blocks, and applied to Step 4 | Steps 3.5, 4 |
   | `## Report section`       | `none`, or one fenced block giving a section layout, rendered after Review Recommendation    | Step 8           |
 
@@ -93,13 +94,13 @@ The plan itself lives in [../change-plan.md](../change-plan.md). Evidence about 
 - **Rationale:** `SKILL.md` and every type file must agree on these field names and forms independently, so the contract
   is pinned here, with a worked example in the plan's Target State (`work-ticket`).
 - **Evidence:** Scope boundary ("these files will contain specific instructions for the review type, including a list of
-  custom agents"); C-11; C-12; contract-pinning rule; software-architect proposal A3.
+  custom agents"); operator answer recorded in D-8 for `## Severity`; C-11; C-12; contract-pinning rule; software-architect proposal A3.
 - **Behavior impact:** Preserving (new structure).
 - **Rejected alternatives:**
   - Free-form type files — rejected because `SKILL.md` would read them differently on each run.
   - Optional sections — rejected because an absent section and a section saying `none` are different states, and a
     missing section should stop the run loudly.
-- **Revisit criterion:** A sixth type needs a field none of the six sections can hold.
+- **Revisit criterion:** A seventh type needs a field none of the seven sections can hold.
 - **Dissent (if any):** None.
 - **Settles delta entry:** S-7
 - **Dependent decisions:** D-4, D-13
@@ -243,29 +244,39 @@ The plan itself lives in [../change-plan.md](../change-plan.md). Evidence about 
 - **Dependent decisions:** D-11, D-14
 - **Referenced in plan:** Target State, Surface Delta
 
-### D-8: One severity rule replaces the size ladder
+### D-8: One default severity rule replaces the size ladder, and a type may override it
 
-- **Question:** With size gone, which severities does a review report?
-- **Decision:** One rule for every run, today's Medium rule: Critical and Warning findings escalate; a Suggestion is
-  raised only when this change directly introduces it. When uncertain, prefer the lower severity, for manual and agent
-  findings alike. The Step 3.3 directive's first line becomes
+- **Question:** With size gone, which severities does a review report, and can a type report differently?
+- **Decision:** One default rule, today's Medium rule: Critical and Warning findings escalate; a Suggestion is raised
+  only when this change directly introduces it. When uncertain, prefer the lower severity, for manual and agent
+  findings alike. A type file's `## Severity` section (D-3) holds `default` or one sentence that replaces the default
+  rule for that type's runs. Step 3.3 puts the type's sentence into the calibration directive in place of the default
+  rule, and Step 4 applies it to manual findings. All six first types hold `default`. A run with no type is not any one
+  type's run, so it always uses the default rule. The Step 3.3 directive's first line becomes
   `This is a **{type}** review of a change touching {N} files.`
-- **Rationale:** The operator chose it: "option 1". It sits in the middle of today's range, and it keeps a Suggestion
-  only when the reviewed change caused it, which matches the directive's existing "the change actively introduces or
-  worsens the issue" test (C-4).
-- **Evidence:** User input; C-2; C-3; C-4; junior-developer reframing (Q1), which noted that Small already keeps
-  introduced Warnings.
+- **Rationale:** The operator chose the default rule ("option 1"), then, shown that it changes the PR outcome on large
+  changes, answered verbatim: "default to option 1, but allow specific review types to override that when needed". The
+  default sits in the middle of today's range and keeps a Suggestion only when the reviewed change caused it, which
+  matches the directive's existing "the change actively introduces or worsens the issue" test (C-4). The override is
+  the "when needed" escape the operator asked for; no first type uses it yet.
+- **Evidence:** User input (both answers); C-2; C-3; C-4; junior-developer reframing (Q1), which noted that Small already
+  keeps introduced Warnings; JD-003, which found the earlier "PR event unchanged" claim wrong.
 - **Behavior impact:** Changing. A review that ran at Small (the default for 1 to 3 files) now shows Suggestions the
   change introduced. A review that ran at Large (over 10 files, or `large` passed) no longer shows pre-existing
-  Suggestions. Manual findings at Large used to prefer the higher severity when uncertain and now prefer the lower.
-  The PR event in `post-code-review-to-pr` is unchanged, because it reads Critical and Warning findings only.
+  Suggestions, and an uncertain finding that used to be a Warning is now a Suggestion. Because
+  `post-code-review-to-pr` posts `REQUEST_CHANGES` only when a Critical or Warning exists, a large change whose only
+  Warnings were uncertain now posts as `COMMENT`. Clear-cut Critical and Warning findings block as before. The operator
+  accepted this.
 - **Rejected alternatives:**
   - Today's Small rule everywhere — rejected by the operator; it hides most minor findings from focused types.
   - Show every severity — rejected by the operator.
-  - A severity band per type — rejected as a setting with no evidence two types need different bands (YAGNI).
-- **Revisit criterion:** A type's output is measured as too noisy or too sparse under the single rule.
+  - Keep large changes strict by measuring the change — rejected by the operator in favor of the default rule.
+  - A severity band set per type with no default — rejected by the operator; the default holds unless a type needs
+    otherwise.
+- **Revisit criterion:** A type's output is measured as too noisy or too sparse under the default rule; that type sets
+  its `## Severity`.
 - **Dissent (if any):** None.
-- **Settles delta entry:** S-4
+- **Settles delta entry:** S-4, S-7
 - **Dependent decisions:** None
 - **Referenced in plan:** Target State, Surface Delta, Behavior Changes
 
@@ -493,7 +504,7 @@ The plan itself lives in [../change-plan.md](../change-plan.md). Evidence about 
   `detect-review-context.bats`. It asserts:
   1. every `references/types/*.md` file has a row in `SKILL.md`'s `## Review Types` table and a token in
      `argument-hint`, and every row names an existing file;
-  2. every type file has the `# Review type: {token}` title and the six D-3 sections in order;
+  2. every type file has the `# Review type: {token}` title and the seven D-3 sections in order;
   3. every agent named in a `## Roster` has a row in the roster table and a numbered prompt in `agent-dispatch.md`;
   4. the union of the default set's checklist categories equals every bold category in `review-checklist.md`.
 - **Rationale:** These agreements hold by convention across files, and C-11 shows such an agreement has already drifted
