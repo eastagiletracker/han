@@ -357,6 +357,7 @@ selected:
 - `{output_directory}/data-analysis.md` — han-core:data-engineer findings (D-series)
 - `{output_directory}/devops-analysis.md` — han-core:devops-engineer findings (DV-series)
 - `{output_directory}/on-call-analysis.md` — han-core:on-call-engineer findings (OCE-series)
+- `{output_directory}/observability-analysis.md` — han-core:observability-engineer findings (OBS-series)
 
 Extract the items from the Findings sections of each file that was read.
 
