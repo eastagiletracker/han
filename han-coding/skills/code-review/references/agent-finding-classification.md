@@ -13,6 +13,7 @@
 - Processing junior-developer results
 - Processing information-architect results (only if dispatched)
 - Processing content-auditor results (only if dispatched)
+- Processing user-experience-designer results (only if dispatched)
 - Processing gap-analyzer results (only if dispatched)
 - Processing results from an agent without a roster-table row
 
@@ -215,6 +216,20 @@ classify severity:
   replaced with a generic description.
 
 Drop facts the auditor classified as present or correctly removed; they produce no findings.
+
+### Processing user-experience-designer results (only if dispatched)
+
+For each user-experience-designer finding (UX1, UX2, ...), assign category **[Usability]** and classify severity:
+
+- **CRIT**: An interface the change introduces that a user cannot complete at all through a supported input or
+  assistive technology — a keyboard trap, a required control with no accessible name, a flow with no way back from an
+  error — or a dark pattern that commits a user to something they did not choose.
+- **WARN**: A WCAG 2.2 Level A or AA failure the change introduces, or a usability problem the change introduces that a
+  named heuristic predicts will cause errors or abandonment.
+- **SUGG**: Interaction polish on screens the change touches — microcopy, feedback timing, visual hierarchy.
+
+Reject findings about screens the change does not touch, and pure visual or brand preferences that name no user
+impact.
 
 ### Processing gap-analyzer results (only if dispatched)
 
