@@ -37,7 +37,8 @@ practice", "would need an unusual sequence") slips through here. That paraphrase
 independent validation in Step 7.4, not by expanding this list.
 
 Security findings (SEC-series) are exempt from this gate because the security agent's evidence standard already requires
-a demonstrated exploit path or CVE reference before any finding is raised.
+a demonstrated exploit path or CVE reference before any finding is raised. Ticket-gap findings (GAP-series) are exempt
+too, because a gap measures the change against a ticket requirement rather than claiming a failure is reachable.
 
 ## Step 7.4: Validate the finding list (independent adversarial pass)
 

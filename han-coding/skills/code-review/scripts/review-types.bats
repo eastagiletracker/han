@@ -61,12 +61,12 @@ default_set() {
   done < <(table_tokens)
 }
 
-@test "every shipped type file has its title and the six sections in order" {
+@test "every shipped type file has its title and the six sections in order, outside any fenced block" {
   expected=$'## Purpose\n## Roster\n## Checklist categories\n## Severity\n## Instructions\n## Report section'
   for f in "$TYPES_DIR"/*.md; do
     token="$(basename "$f" .md)"
     [ "$(head -n 1 "$f")" = "# Review type: $token" ] || { echo "$f: bad title"; return 1; }
-    actual="$(grep -E '^## ' "$f")"
+    actual="$(awk '/^```/{fence=!fence; next} !fence && /^## /' "$f")"
     [ "$actual" = "$expected" ] || { echo "$f: sections are"; echo "$actual"; return 1; }
   done
 }

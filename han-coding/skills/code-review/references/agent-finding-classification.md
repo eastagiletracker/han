@@ -11,6 +11,7 @@
 - Processing on-call-engineer results (only if dispatched)
 - Processing observability-engineer results (only if dispatched)
 - Processing junior-developer results
+- Processing gap-analyzer results (only if dispatched)
 
 **Severity calibration (applies to every category below).** Severity calibration is governed by the Step 3.3
 calibration directive in [agent-dispatch.md](./agent-dispatch.md), the authoritative home for the severity rule. The
@@ -183,3 +184,17 @@ severity:
 
 Do not duplicate a junior-developer finding when another agent has already raised the same issue — prefer the
 specialist's classification and reference it from the JD finding instead.
+
+### Processing gap-analyzer results (only if dispatched)
+
+For each gap finding (GAP-001, GAP-002, ...) from the gap-analyzer, assign category **[Ticket: Gap]** and classify
+severity:
+
+- **CRIT**: Only under the calibration directive's critical cases — proven security exploit, data corruption, data
+  isolation break, or data loss with no recovery.
+- **WARN**: A Missing, Divergent, or Partial gap — a ticket requirement the change does not meet, meets differently
+  than the ticket states, or meets only in part.
+- **SUGG**: An Implicit gap — a requirement the ticket implies but does not state.
+
+Keep a map from each GAP-### to the task ID it becomes, so the Ticket Resolution table can show that task ID as the
+row's evidence. Carry the `## Requirement Map` into the report's type section; it produces no findings of its own.

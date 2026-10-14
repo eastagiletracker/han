@@ -84,7 +84,12 @@ Then verify:
     Step 3.2 selected, plus the independent validation pass. When every planned coverage ran, the block is absent.
 23. The `**Review type:**` header line is present under the title and names this run's type and its purpose, or
     `default`. A typed run's report names no other review type anywhere.
-24. Every finding whose location was established by a region read (Step 4's path for a file over 1000 lines) names its
+24. When the run's type file has a `## Report section` other than `none`, that section is present between the
+    `<!-- type-section:start -->` and `<!-- type-section:end -->` markers, immediately after the Review Recommendation,
+    and filled by the type file's rules. On a `work-ticket` run, the verdict follows those rules and every row's
+    evidence names a `file:line`, a surviving WARN-### or SUGG-###, or `GAP-### discarded at validation`. When the type
+    has no report section, neither the section nor the markers appear.
+25. Every finding whose location was established by a region read (Step 4's path for a file over 1000 lines) names its
     enclosing unit and the lines read in isolation to confirm it, in the form `finding-content.md` defines. A finding from
     a file read whole carries no such note. This item runs in every mode, including the ones where Step 7.4 does not.
 
