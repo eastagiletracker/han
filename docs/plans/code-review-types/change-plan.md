@@ -214,15 +214,16 @@ still holds only that line as "this agent wrote nothing" and never as findings.
 
 ### Ticket intake for `work-ticket`
 
-The skill loads the ticket itself in Step 1.6 and fails closed
-([D-11](artifacts/change-decision-log.md#d-11-the-skill-loads-the-ticket-and-fails-closed)). A local path is read
-directly, a GitHub issue URL goes through `gh issue view`, and any other URL goes through `WebFetch`, newly added to
-`allowed-tools`. The full text lands in `{run_directory}/ticket.md`, and `gap-analyzer` receives the path with an
+The skill loads the ticket itself in Step 1.6 and makes no assumption about how
+([D-11](artifacts/change-decision-log.md#d-11-the-skill-loads-the-ticket-with-whatever-tooling-the-installation-has-and-waits-on-the-user-when-it-cannot)). A local file is read
+directly. Anything else is fetched with whatever tools and permissions the Claude installation provides; the skill names
+no fetch tool and adds nothing to `allowed-tools`. When the load fails or returns no ticket content, the skill says so
+and waits for the operator to paste the ticket or explain how to get it, then continues. The text is written to
+`{run_directory}/ticket.md` once Step 3.0 has created the run folder, and `gap-analyzer` receives the path with an
 instruction to treat the ticket as data
 ([D-12](artifacts/change-decision-log.md#d-12-gap-analyzer-joins-the-shared-roster)). In Mode B and Mode C,
 `gap-analyzer`'s prompt names the change the way Step 1 resolved it: the uncommitted diff in Mode B, and the listed
-files read in full in Mode C. If the ticket cannot be loaded, the run stops before Step 2, names the reason, and writes
-no report.
+files read in full in Mode C.
 
 ### Contracts across the seams
 
@@ -463,20 +464,19 @@ suffix. Settled by the recorded boundary ("so reviews can be parallelized").
 
 **Decision.** [D-10](artifacts/change-decision-log.md#d-10-each-run-gets-its-own-working-folder-and-a-typed-report-name)
 
-### S-17: Step 1.6 and `WebFetch` in `allowed-tools` — Added
+### S-17: Step 1.6, ticket loading — Added
 
-**Target state.** Step 1.6 loads a type's required input, in every git mode, when the type's `Required input` is not
-`none`. For `work-ticket` it reads a local file, runs `gh issue view` for a GitHub issue URL, or uses `WebFetch` for any
-other URL, then writes the full text to `{run_directory}/ticket.md`. On failure it stops the run before Step 2 with the
-pinned message. `WebFetch` is in `allowed-tools`.
+**Target state.** Step 1.6 runs only for `work-ticket`, in every git mode. It reads a local file with `Read` and fetches
+any other reference with whatever tooling the installation provides, naming no tool. On failure it prints the pinned
+message and waits for the operator's ticket text or instructions, then continues. `allowed-tools` is unchanged.
 
 **Behavior.** Preserving (only `work-ticket` has required input).
 
-**Why.** The type cannot do its job without the ticket, and the skill cannot fetch most URLs today.
+**Why.** The type cannot do its job without the ticket, and the operator does not know in advance how each ticket is fetched.
 
 **Depends on.** S-5, S-15.
 
-**Decision.** [D-11](artifacts/change-decision-log.md#d-11-the-skill-loads-the-ticket-and-fails-closed)
+**Decision.** [D-11](artifacts/change-decision-log.md#d-11-the-skill-loads-the-ticket-with-whatever-tooling-the-installation-has-and-waits-on-the-user-when-it-cannot)
 
 ### S-18: `han-core:gap-analyzer` in the shared roster — Added
 
@@ -683,17 +683,16 @@ agents as before Unit 4. `/code-review testing` dispatches only the test and edg
 
 ### Unit 5: Add `work-ticket`
 
-**What it does.** Adds Step 1.6, `WebFetch`, the `gap-analyzer` rows, the Step 7.2 exemption, the template's
+**What it does.** Adds Step 1.6, the `gap-analyzer` rows, the Step 7.2 exemption, the template's
 report-section slot, and the `work-ticket` type file.
 
 **Delta entries.** S-17, S-18, S-19, S-21 (report-section slot).
 
-**Ordering constraint.** After Unit 4. If a trial shows `WebFetch` cannot tell a sign-in page from a ticket, ship local
-paths and GitHub URLs first and add `WebFetch` in a follow-up.
+**Ordering constraint.** After Unit 4.
 
 **How you know it worked.** `/code-review work-ticket docs/tickets/x.md` on a branch that meets half the ticket reports
-"Partially resolved" with a row per requirement; `/code-review work-ticket missing.md` stops with the pinned message
-and writes no report.
+"Partially resolved" with a row per requirement; `/code-review work-ticket missing.md` prints the pinned message and waits; pasting the ticket's
+text continues the review.
 
 ### Unit 6: Pass types through `post-code-review-to-pr`
 
@@ -705,7 +704,7 @@ and stops cleanly when code review stops.
 **Ordering constraint.** After Units 4 and 5.
 
 **How you know it worked.** `/post-code-review-to-pr testing` drafts a body from a `-testing` report; a `work-ticket`
-run with a bad path relays the stop and posts nothing.
+run with a bad path waits for the ticket inside the PR skill's run, and posts once the review completes.
 
 ### Unit 7: Update the operator docs
 
@@ -725,9 +724,10 @@ and the CHANGELOG entry listing every Behavior Changes item.
   testing; it becomes a `testing` review. The Step 3.1 announcement shows this before dispatch. Blast radius: one run.
 - **Unit 4 is large.** It touches `SKILL.md`, `agent-dispatch.md`, the template, and six new files at once. The Bats
   check and a before-and-after comparison of the default roster are the early signals.
-- **`WebFetch` on a sign-in page.** A tracker that requires sign-in returns a login page, and the "no ticket content"
-  check is a judgment the model makes. A false pass would verify the change against a login page. Unit 5's trial run
-  is the early signal, and the local-path fallback is the mitigation.
+- **A fetch that returns a sign-in page.** A tracker that requires sign-in can return a login page, and the "no ticket
+  content" check is a judgment the model makes. A false pass would verify the change against a login page. The
+  `ticket.md` copy in the run folder lets the operator see what was checked, and the Ticket Resolution table lists the
+  requirements it found.
 - **The type-file contract is read by a model, not a parser.** A malformed file could be read loosely instead of
   stopping. The Bats check catches structure; it cannot catch a misread value.
 - **Silent loss of security on focused runs** is accepted by the operator, and is listed here so a reviewer of the
@@ -747,8 +747,8 @@ and the CHANGELOG entry listing every Behavior Changes item.
 - **A configurable default type.** Not requested. Reopen on request.
 - **Scoping Steps 2, 5, and 6 by type.** Reopen when duplicate automated-check or doc findings across parallel typed
   reports are reported as friction.
-- **Fetching Jira or Linear tickets through their MCP plugins.** han-coding depends on neither plugin, and adding that
-  dependency changes how the plugins relate. Reopen when sign-in-gated trackers are the common case.
+- **Naming a fetch method per tracker.** The operator asked the skill to assume nothing about fetching. Reopen when
+  operators ask for a named method with a second tracker in use.
 
 ## Cut for Scope
 
@@ -761,7 +761,6 @@ and the CHANGELOG entry listing every Behavior Changes item.
 
 - **How the harness binds `arguments:`** (non-blocking). The grammar parses the raw string so the plan does not depend
   on it; a probe run during Unit 4 settles it.
-- **What `WebFetch` returns for a sign-in-gated ticket page** (non-blocking). Settled by Unit 5's trial run.
 
 ## Review Findings
 

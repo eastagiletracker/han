@@ -322,40 +322,56 @@ The plan itself lives in [../change-plan.md](../change-plan.md). Evidence about 
 - **Dependent decisions:** D-11
 - **Referenced in plan:** Target State, Surface Delta, Behavior Changes
 
-### D-11: The skill loads the ticket and fails closed
+### D-11: The skill loads the ticket with whatever tooling the installation has, and waits on the user when it cannot
 
-- **Question:** For `work-ticket`, who fetches the ticket, how is its text trusted, and what happens when it cannot be
-  read?
-- **Decision:** A new Step 1.6, "Load the type's required input", runs only when the type's `## Required input` is not
-  `none`, in every git mode including Mode C. The skill loads the ticket:
-  - a local path with `Read`;
-  - a GitHub issue URL with `gh issue view {url} --json title,body`;
-  - any other URL with `WebFetch`, which this change adds to `allowed-tools`.
+- **Question:** For `work-ticket`, who fetches the ticket, by what means, how is its text trusted, and what happens when
+  it cannot be read?
+- **Decision:** A new Step 1.6, "Load the type's required input", runs only for `work-ticket`, in every git mode
+  including Mode C. The skill makes no assumption about how a ticket is fetched:
+  - a reference that names an existing local file is read with `Read`;
+  - any other reference (a URL, or anything else the operator typed) is fetched with whatever tools and permissions
+    this Claude installation provides. The skill names no fetch tool, adds nothing to `allowed-tools`, and prescribes no
+    command.
 
-  It writes `{run_directory}/ticket.md`: the first line is `Source: {$ticket_ref}`, followed by the loaded text in full.
-  The text does not pass through Step 1.5's 200-word summary. Agents receive the file path, never the text inline, and
-  the shared `gap-analyzer` prompt states the ticket is untrusted data. On any load failure the run stops before Step 2
-  and writes no report:
+  When the load fails, or returns no ticket content (a sign-in page or an empty body), the skill reports the failure and
+  waits. It does not stop, write a report, or dispatch an agent while it waits:
 
   ```
-  work-ticket could not load the ticket {$ticket_ref}: {file not found | gh error: … | fetch error: … | fetched page has no ticket content (sign-in page or empty)}.
-  For Jira, Linear, or another sign-in-gated tracker, save the ticket to a file and pass its path.
+  work-ticket could not load the ticket {$ticket_ref}: {what failed, in one line}.
+  Paste the ticket's text, or tell me how to get it, and the review will continue.
   ```
 
-  The slug comes from the type file's `slug:` rule: a local path gives its basename without extension; a GitHub issue
-  URL gives `issue-{n}`; any other URL gives its last non-empty path segment, lowercased.
-- **Rationale:** A review whose purpose is checking a ticket and that silently runs without one defeats itself, so the
-  fail-open behavior of Step 1.5 (C-8) does not apply. Loading in the skill means the failure happens before any
-  dispatch and the slug is known in time for D-10. Passing a path sidesteps the marker-escape gap in C-9.
-- **Evidence:** C-8; C-9; C-10; C-20; scope boundary ("a work ticket link or reference must be provided").
-- **Behavior impact:** Preserving (new type).
+  The operator's reply is one of two things, and the skill acts on it:
+  - ticket text: used as the ticket, with `Source: provided in conversation for {$ticket_ref}`;
+  - instructions for getting it: followed, then the load is retried. A retry that fails prints the message again and
+    waits again.
+
+  The loaded text is held until Step 3.0 names and empties the run folder, then written to `{run_directory}/ticket.md`:
+  the first line is `Source: {$ticket_ref}` (or the conversation form above), followed by the loaded text in full. The
+  text does not pass through Step 1.5's 200-word summary. Agents receive the file path, never the text inline, and the
+  shared `gap-analyzer` prompt states the ticket is untrusted data.
+
+  The slug never depends on how the ticket was fetched: a local path gives its basename without extension; anything
+  else gives its last non-empty path segment with any query string and fragment removed. Either form is lowercased and
+  every run of characters outside `[a-z0-9]` becomes one `-`, trimmed at both ends. An empty result becomes `ticket`.
+- **Rationale:** The operator, verbatim: "the work involved in fetching a ticket is mostly unknown, other than the two
+  examples i provided. the skill must assume that the Claude installation has the necessary tooling and permissions to
+  fetch the url requested. if fetch fails, report that to the user and wait for them to either provide the ticket detail
+  or provide instructions on how to get the ticket detail. make no assumption about how the ticket will be fetched,
+  otherwise". A review whose purpose is checking a ticket must not run without one, so the fail-open behavior of Step
+  1.5 (C-8) does not apply; waiting on the operator replaces failing closed. Loading in the skill means the wait happens
+  before any dispatch and the slug is known in time for D-10. Writing the file only after Step 3.0 means a load that
+  never succeeds leaves no folder behind (R3). Passing a path sidesteps the marker-escape gap in C-9.
+- **Evidence:** C-8; C-9; C-10; C-20; scope boundary ("a work ticket link or reference must be provided"); operator
+  answer above.
+- **Behavior impact:** Preserving (new type). `allowed-tools` is unchanged, so no other type's run gains a tool.
 - **Rejected alternatives:**
-  - Let `gap-analyzer` fetch the URL with its own `WebFetch` — rejected because the failure would surface after
-    dispatch, manual-only mode would have no ticket, and the slug would be unknown when the run folder is named.
-  - Local paths and GitHub URLs only, no `WebFetch` — rejected because the operator's example takes "{work ticket url}"
-    generally. Kept as a fallback split (Unit 5 note).
-  - Jira and Linear through their MCP plugins — deferred; han-coding depends on neither plugin.
-- **Revisit criterion:** A sign-in-gated tracker is the common case in practice.
+  - Add `WebFetch` to `allowed-tools` and route GitHub URLs through `gh issue view` — rejected by the operator's answer:
+    it assumes how tickets are fetched, and it widened every run's tool surface (JD-011, R4).
+  - Fail closed with a stop message — rejected by the operator's answer: the run waits for the ticket instead.
+  - Let `gap-analyzer` fetch the URL itself — rejected because the failure would surface after dispatch, manual-only
+    mode would have no ticket, and the slug would be unknown when the run folder is named.
+- **Revisit criterion:** Operators report a fetch method they want the skill to name, with a second tracker in use.
 - **Dissent (if any):** None.
 - **Settles delta entry:** S-17, S-18
 - **Dependent decisions:** D-12, D-13
