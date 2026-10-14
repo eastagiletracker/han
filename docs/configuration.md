@@ -178,7 +178,8 @@ A financial institution might add `pii-check`, or a healthcare company `hipaa-co
 section.
 
 Each line names a token and a type file. The token is lowercase letters, digits, and hyphens, starting with a letter. A
-shipped type (`security`, `testing`, `architecture`, `observability`, `maintainability`, `work-ticket`), a retired size
+shipped type (`security`, `testing`, `architecture`, `data`, `observability`, `resilience`, `release`,
+`maintainability`, `docs`, `ux`, `work-ticket`), a retired size
 word (`small`, `medium`, `large`, `dynamic`), or `default` is reserved: its line is ignored with a one-line note naming
 the file. The path resolves exactly as `writing-voice` does. When both files declare the same token, the project file's
 line wins; different tokens from the two files add together.
@@ -245,7 +246,8 @@ and one or more comma-separated agents, matched as `## Extra Agents` entries are
 agent named twice for one type runs once.
 
 On a run of that type, every attached agent runs, with no signal check: you named it for that type. On the default run,
-agents attached to a default-set type (`security`, `testing`, `architecture`, `observability`, `maintainability`) join
+agents attached to a default-set type (`security`, `testing`, `architecture`, `data`, `observability`, `resilience`,
+`release`, `maintainability`) join
 under the `## Extra Agents` signal rule, so the default run still dispatches only what the change calls for. A line is
 read only when its token runs, so a personal file can attach agents to a type only some of your projects declare,
 without a note in the others.

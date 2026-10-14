@@ -97,7 +97,8 @@ specificity: tell the reviewer what to look for, against what rubric, and what t
 this, so the happy path is short.
 
 1. **Run [`/code-review`](../../han-coding/docs/skills/code-review.md).** With no arguments, the skill runs the default
-   review, which covers security, testing, architecture, observability, and maintainability in one report. Two agents
+   review, which covers security, testing, architecture, data, observability, resilience, release, and maintainability
+   in one report. Two agents
    always run: `junior-developer` for clarity and standards, `adversarial-security-analyst` for exploit-path
    security. The rest (`test-engineer`, `edge-case-explorer`, `structural-analyst`, `behavioral-analyst`,
    `concurrency-analyst`, `data-engineer`, `devops-engineer`, `on-call-engineer`, `observability-engineer`) join only when the changed files touch
@@ -118,7 +119,8 @@ this, so the happy path is short.
 
 3. **Name a review type when you want one concern covered well.** Pass the type as the first word:
    `/code-review security "focus on the new auth endpoints"`. The shipped types are `security`, `testing`,
-   `architecture`, `observability`, `maintainability`, and `work-ticket <ticket>`, and your team can declare more in
+   `architecture`, `data`, `observability`, `resilience`, `release`, `maintainability`, `docs`, `ux`, and
+   `work-ticket <ticket>`, and your team can declare more in
    `.han/config.md`. A typed review runs only the specialists that type names and sweeps only its checklist categories
    by hand, so its report stays on one concern. A focused review does not run the security check unless the type is
    `security`, and its report does not mention that, so run the default review or `security` as well when security

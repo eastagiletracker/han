@@ -160,8 +160,9 @@ Run `/code-review` in Claude Code. Pass an optional review type and an optional 
 
 Give it:
 
-1. **A review type, optional.** Name it as the first word: `security`, `testing`, `architecture`, `observability`,
-   `maintainability`, `work-ticket <ticket>`, or a type your `.han/config.md` declares. Without one, the skill runs the
+1. **A review type, optional.** Name it as the first word: `security`, `testing`, `architecture`, `data`,
+   `observability`, `resilience`, `release`, `maintainability`, `docs`, `ux`, `work-ticket <ticket>`, or a type your
+   `.han/config.md` declares. Without one, the skill runs the
    default review. The first word `default` selects the default review explicitly. See [Review types](#review-types).
 2. **A focus-area or context hint, optional.** _"Focus on the security implications of the new auth endpoints,"_ or
    _"review with extra attention to the database migration."_ Focus hints bias the manual review toward the named area;
@@ -170,7 +171,9 @@ Give it:
    (Mode A). If you are on the default branch with uncommitted work, Mode B kicks in. If there is no git, Mode C reviews
    what you point it at.
 4. **Specific files or globs, optional.** In Mode C (or when you want to scope a git-mode review), pass file paths or
-   glob patterns after any type. A path named like a type is written `./testing` so it reads as a path.
+   glob patterns after any type. A path named like a type is written `./testing` so it reads as a path, and a focus
+   hint that starts with a type word, such as _"data import flow"_, needs `default` in front of it to run the default
+   review.
 
 Example prompts:
 
@@ -245,7 +248,8 @@ What's Good). The document can contain:
   (`S#`), behavioral findings (`B#`), clarity findings (`JD#`), concurrency findings (`C#` when the concurrency analyst
   was dispatched), data findings (`D#` when the data engineer was dispatched), devops findings (`DV#` when the devops
   engineer was dispatched), on-call resilience findings (`OCE#` when the on-call engineer was dispatched),
-  observability findings (`OBS#`), ticket gaps (`GAP-###` on a `work-ticket` run), and findings from a team's own
+  observability findings (`OBS#`), documentation findability findings (`IA#`) and lost-fact findings (`CA#`) on a
+  `docs` run, usability findings (`UX#`) on a `ux` run, ticket gaps (`GAP-###` on a `work-ticket` run), and findings from a team's own
   agents (`X-{agent name}`). Each is
   classified into the main severity tiers using the classification rubric. Security findings are the exception: they are
   not folded into a severity section (see below).
@@ -292,24 +296,30 @@ is exceeded, the skill says so and recommends another review after fixes land.
 
 ## Review types
 
-Six review types ship with the skill. Each is a file under `han-coding/skills/code-review/references/types/`.
+Eleven review types ship with the skill. Each is a file under `han-coding/skills/code-review/references/types/`.
 
-| Type              | Always runs                                | Joins when its signal fires            | Manual pass covers                                                                                   |
-| ----------------- | ------------------------------------------ | -------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `security`        | `adversarial-security-analyst`             | none                                   | Data Isolation, Error Handling, API Design                                                           |
-| `testing`         | `test-engineer`, `edge-case-explorer`      | none                                   | Testing, Correctness                                                                                 |
-| `architecture`    | `structural-analyst`, `behavioral-analyst` | `concurrency-analyst`, `data-engineer` | Code Organization, API Design, Database, Performance                                                 |
-| `observability`   | `observability-engineer`                   | `on-call-engineer`, `devops-engineer`  | Error Handling                                                                                       |
-| `maintainability` | `junior-developer`                         | none                                   | Code Maintainability, Documentation, Code Style & Patterns, Architecture Decision Records, Packaging |
-| `work-ticket`     | `gap-analyzer`                             | `test-engineer`                        | Correctness, Testing                                                                                 |
+| Type              | Always runs                                | Joins when its signal fires | Manual pass covers                                                                        |
+| ----------------- | ------------------------------------------ | --------------------------- | ----------------------------------------------------------------------------------------- |
+| `security`        | `adversarial-security-analyst`             | none                        | Data Isolation, Error Handling, API Design                                                |
+| `testing`         | `test-engineer`, `edge-case-explorer`      | none                        | Testing, Correctness                                                                      |
+| `architecture`    | `structural-analyst`, `behavioral-analyst` | none                        | Code Organization, API Design, Performance                                                |
+| `data`            | `data-engineer`                            | `on-call-engineer`          | Database, Data Isolation, Performance                                                     |
+| `observability`   | `observability-engineer`                   | none                        | Error Handling                                                                            |
+| `resilience`      | `on-call-engineer`                         | `concurrency-analyst`       | Error Handling, Performance, Correctness                                                  |
+| `release`         | `devops-engineer`                          | `data-engineer`             | Packaging, Error Handling                                                                 |
+| `maintainability` | `junior-developer`                         | none                        | Code Maintainability, Documentation, Code Style & Patterns, Architecture Decision Records |
+| `docs`            | `information-architect`                    | `content-auditor`           | Documentation, Architecture Decision Records                                              |
+| `ux`              | `user-experience-designer`                 | none                        | none                                                                                      |
+| `work-ticket`     | `gap-analyzer`                             | `test-engineer`             | Correctness, Testing                                                                      |
 
 Every type runs the same shared flow: automated checks, the documentation compliance and freshness passes, the YAGNI
 pass, the independent validation pass, and the readability rewrite. A type narrows which specialists run and which
 checklist categories the manual pass applies.
 
-**The default review.** With no type, the skill runs `security`, `testing`, `architecture`, `observability`, and
-`maintainability` as one run with one report. `junior-developer` and `adversarial-security-analyst` always run, every
-other agent in those five types runs only when its signal fires, and the manual pass covers every checklist category.
+**The default review.** With no type, the skill runs `security`, `testing`, `architecture`, `data`, `observability`,
+`resilience`, `release`, and `maintainability` as one run with one report. `junior-developer` and
+`adversarial-security-analyst` always run, every other agent in those eight types runs only when its signal fires, and
+the manual pass covers every checklist category. `docs`, `ux`, and `work-ticket` run only when you name them.
 The default review applies none of the member types' severity, instructions, or report section.
 
 **A focused review skips security.** `/code-review testing` runs no security check, and its report does not say so. Run
@@ -539,6 +549,11 @@ URL: https://itrevolution.com/product/accelerate/
   change adds or alters telemetry design: metric instruments or labels, span attributes, log schemas, OpenTelemetry SDK
   setup, or telemetry pipeline configuration. SLOs, alert rules, and dashboards stay with `devops-engineer`;
   source-line debuggability stays with `on-call-engineer`.
+- [`information-architect`](../../../han-core/docs/agents/information-architect.md),
+  [`content-auditor`](../../../han-core/docs/agents/content-auditor.md). The agents `docs` dispatches: the first always,
+  the second when the change modifies an existing doc, with that doc's prior version from git.
+- [`user-experience-designer`](../../../han-core/docs/agents/user-experience-designer.md). The agent `ux` always
+  dispatches.
 - [`adversarial-validator`](../../../han-core/docs/agents/adversarial-validator.md). Dispatched once at Step 7.4 to re-attack
   the consolidated finding list against the code and confirm, demote, or drop each finding. Runs whenever the review
   produced at least one corrective finding.

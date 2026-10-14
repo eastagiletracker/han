@@ -63,7 +63,8 @@ Give it:
 1. **An open PR on the current branch.** The skill verifies with `gh pr view --json number,url` and
    `gh pr diff --name-only`. If either fails, it stops.
 2. **A review type, optional.** The same first-word type `/code-review` takes: `security`, `testing`, `architecture`,
-   `observability`, `maintainability`, `work-ticket <ticket>`, or a type your `.han/config.md` declares. Without one,
+   `data`, `observability`, `resilience`, `release`, `maintainability`, `docs`, `ux`, `work-ticket <ticket>`, or a type
+   your `.han/config.md` declares. Without one,
    the default review runs.
 3. **A focus hint, optional.** _"Focus on the security implications of the new auth endpoints."_ The whole argument
    string is forwarded to `/code-review` as you typed it.
