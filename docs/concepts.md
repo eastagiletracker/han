@@ -90,7 +90,8 @@ A few concrete pairings from the han plugin:
   with a production surface brings in `devops-engineer`. A user-visible flow brings in `user-experience-designer`.
 - **`/code-review` always dispatches `junior-developer` and `adversarial-security-analyst`, plus the rest of the roster
   conditionally** (`test-engineer`, `edge-case-explorer`, `structural-analyst`, `behavioral-analyst`,
-  `concurrency-analyst`, `data-engineer`, `devops-engineer`, `on-call-engineer`) based on what the changed files touch.
+  `concurrency-analyst`, `data-engineer`, `devops-engineer`, `on-call-engineer`, `observability-engineer`) based on what
+  the changed files touch.
   The roster scales with the [size](./sizing.md): a small change runs the minimum roster; a large change runs the full
   conditional roster. Each agent reviews the branch changes from its own lens, and the skill classifies their findings
   into the review output.
@@ -98,7 +99,7 @@ A few concrete pairings from the han plugin:
   and `software-architect`, plus the rest of the roster by signal** (`concurrency-analyst` when concurrency primitives
   are present; `adversarial-security-analyst`, `data-engineer`, `devops-engineer` when the focus area touches auth/PII,
   data contracts, or operational surface; `on-call-engineer` when application source in the focus area shows on-call
-  resilience signal; `codebase-explorer` for large unfamiliar areas; `system-architect` at large size when a
+  resilience signal; `observability-engineer` when the focus area carries telemetry design; `codebase-explorer` for large unfamiliar areas; `system-architect` at large size when a
   cross-service or bounded-context seam is present). The roster scales with the [size](./sizing.md): small runs the
   spine plus concurrency; large runs every signalled specialist. The discovery analysts run first, `risk-analyst` scores
   their findings, and the architects synthesize. When `system-architect` is not dispatched, cross-service and
@@ -159,7 +160,7 @@ YAGNI applies to the planning skills (`/plan-a-feature`, `/plan-a-change`, `/pla
 `/automated-test-planning`, `/architectural-decision-record`). It also applies to several agents
 (`discussion-facilitator`, `plan-synthesizer`,
 `junior-developer`, `software-architect`, `system-architect`, `test-engineer`, `edge-case-explorer`, `data-engineer`,
-`devops-engineer`, `on-call-engineer`).
+`devops-engineer`, `on-call-engineer`, `observability-engineer`).
 
 Read the full [YAGNI](./yagni.md) reference for the gates, the acceptable-evidence list, the named anti-patterns, and
 the per-skill / per-agent application table.

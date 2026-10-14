@@ -100,7 +100,7 @@ this, so the happy path is short.
    small, medium, or large (defaulting to small) and dispatches a roster of specialist agents proportional to that size.
    Two always run: `junior-developer` for clarity and standards, `adversarial-security-analyst` for exploit-path
    security. The rest (`test-engineer`, `edge-case-explorer`, `structural-analyst`, `behavioral-analyst`,
-   `concurrency-analyst`, `data-engineer`, `devops-engineer`, `on-call-engineer`) join only when the changed files touch
+   `concurrency-analyst`, `data-engineer`, `devops-engineer`, `on-call-engineer`, `observability-engineer`) join only when the changed files touch
    their domain. Each one arrives with a narrow, scoped brief and a calibration directive. That directive tells it to
    raise only what the change introduced or worsened, plus anything critical regardless of who introduced it. That
    scoping is the whole reason the output is not a generic nit list. It is not the agent's persona label doing the work;

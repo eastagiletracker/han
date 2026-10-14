@@ -9,6 +9,7 @@
 - Processing data-engineer results (only if dispatched)
 - Processing devops-engineer results (only if dispatched)
 - Processing on-call-engineer results (only if dispatched)
+- Processing observability-engineer results (only if dispatched)
 - Processing junior-developer results
 
 **Size-based demotion (applies to every category below).** Size-based demotion is governed by [SKILL.md](../SKILL.md)
@@ -148,6 +149,26 @@ files, it belongs to DV-series, not OCE-series.
 Apply the agent's own tone-anti-pattern sweep as a classification check: a finding that reads as sugarcoated criticism,
 thin blame, tourist citation, or bibliographic empathy should be either rewritten or omitted before being carried into
 the rollup.
+
+### Processing observability-engineer results (only if dispatched)
+
+For each observability-engineer finding (OBS1, OBS2, ...), assign category **[Observability]** and classify severity:
+
+- **CRIT**: A telemetry design problem the change actively introduces whose worst case is losing the evidence or an
+  unbounded bill — an unbounded identifier (user, request, or account ID, raw URL path) as a metric label on a
+  production path, a sampler that cannot keep error traces on a path that has none of its own error signal, a pipeline
+  change that ships unscrubbed credentials or regulated data to a third-party backend.
+- **WARN**: Telemetry design that degrades analysis or cost but loses nothing on its own — a wrong instrument type, a
+  value interpolated into a metric name, attribute names that drift from semantic conventions or from names used
+  elsewhere in the repository, a Collector pipeline missing `memory_limiter` or `batch`, an event written as a log, a
+  metric, and a span event with nothing joining them.
+- **SUGG**: Telemetry polish on code the change touches — span names, units, histogram buckets, a shared
+  instrumentation helper.
+
+Reject findings that cross into `devops-engineer` territory (SLO definitions, alert rules, dashboards) or
+`on-call-engineer` territory (whether a source-line log or metric exists, correlation-id propagation, PII in an
+individual log statement). Reject recommendations for tail sampling, a Collector tier, or retention tiers that the
+calibration directive rules out for the project's volume. Demote one severity level when in doubt.
 
 ### Processing junior-developer results
 
