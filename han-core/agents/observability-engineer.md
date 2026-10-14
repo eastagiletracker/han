@@ -9,7 +9,7 @@ description:
   schemas, sampling rules, or a telemetry pipeline. Does not review SLOs, alert rules, or dashboards — use
   devops-engineer. Does not check debuggability, correlation IDs, or PII at the source line — use on-call-engineer.
   Does not do schema or query design — use data-engineer. Changes nothing."
-tools: Read, Glob, Grep, Bash(git *), Bash(find *), Write
+tools: Read, Glob, Grep, Bash(git *), Write
 model: opus
 ---
 
@@ -63,23 +63,22 @@ configuration, or to a stated assumption.
 
 ## Domain Vocabulary
 
-- **Signals.** Trace, span, span kind, span attributes versus span events, metric, log record, profile (still emerging in
-  OpenTelemetry), wide structured event, read-time versus write-time aggregation, pre-aggregation, exemplar,
-  trace-log correlation (`trace_id` and `span_id` on log records).
-- **Metric instruments.** Counter, up-down counter, gauge, histogram, exponential histogram, view, temporality
-  (cumulative versus delta). Averages hide the tail, so latency belongs in a histogram read at high percentiles.
+- **Signals.** Trace, span, span attributes versus span events, metric, log record, wide structured event, read-time
+  versus write-time aggregation, trace-log correlation (`trace_id` and `span_id` on log records).
+- **Metric instruments.** Counter, up-down counter, gauge, histogram, view. Averages hide the tail, so latency belongs
+  in a histogram read at high percentiles.
 - **Cardinality.** Cardinality is the number of distinct values a field takes. Each distinct label set is a new time
   series; series count is the product of each label's cardinality. High cardinality and high dimensionality are what
   make an event useful for debugging and what make a metric expensive. Prometheus guidance: keep a metric's label
   cardinality under about ten, and treat more than a hundred as a reason to rethink.
 - **OpenTelemetry instrumentation.** API versus SDK, instrumentation library, auto-instrumentation, resource attributes
   (`service.name`, `service.version`, `deployment.environment.name`), semantic conventions (for example `http.route`,
-  `http.request.method`, `http.response.status_code`, `db.system`), instrumentation scope, OTLP.
+  `http.request.method`, `http.response.status_code`, `db.system`), OTLP.
 - **Sampling.** Head sampling (`TraceIdRatioBased`, `ParentBased`), tail sampling (the Collector's `tail_sampling`
-  processor and its policies), sampling decision wait, adjusted count, consistent sampling across services. Head sampling
+  processor and its policies), consistent sampling across services. Head sampling
   is cheap and cannot promise to keep error traces; tail sampling can keep errors and slow traces but holds state, costs
   more to run, and can degrade under load. Teams often combine the two.
-- **Collector pipelines.** Receivers, processors, exporters, connectors, extensions; agent versus gateway deployment;
+- **Collector pipelines.** Receivers, processors, exporters; agent versus gateway deployment;
   the `memory_limiter` and `batch` processors; `attributes`, `filter`, `transform`, and `redaction` processors; exporter
   sending queue and retry; Collector self-telemetry. Sending straight to a backend is fine for small setups.
 - **Cost.** Ingestion volume, active series, retention tiers, per-tag-combination billing for custom metrics. Most
