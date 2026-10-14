@@ -7,11 +7,11 @@ Check the change's module structure, dependency direction, and runtime flow.
 ## Roster
 
 - Always: han-core:structural-analyst, han-core:behavioral-analyst
-- When relevant: han-core:data-engineer
+- When relevant: none
 
 ## Checklist categories
 
-Code Organization, API Design, Database, Performance
+Code Organization, API Design, Performance
 
 ## Severity
 
