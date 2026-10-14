@@ -8,6 +8,13 @@ source or by codebase evidence, or is marked `[single-source]` and does not stan
 
 ## Summary
 
+Build a narrow `observability-engineer` that owns the telemetry design layer only, and leave service levels and alerting
+with the DevOps reviewer (`devops-engineer`) and debuggability with the on-call reviewer (`on-call-engineer`). A broader
+agent that takes over all of observability was considered and rejected, because it would rewrite a working agent and
+repeat the over-scoping Han's last specialist research had to walk back. Your request to build the agent is the evidence
+that it is needed now. Whether it finds problems the existing two would miss is untested, so the first few reviews
+should check that.
+
 Observability engineering is the work of making a running system answer questions about itself. That means deciding
 what the software records, how those records connect across services, what gets kept or thrown away to control cost,
 how "working well enough" is defined for users, and which signals should wake a person up. As employers describe the
@@ -20,14 +27,7 @@ underneath: how telemetry is named, how many distinct values a recorded field ma
 requests get kept when only some can be, and how the pipeline that carries telemetry is configured. Those problems show
 up in application code and in configuration alike, and today neither reviewer is pointed at them.
 
-The recommendation is to build a narrow `observability-engineer` that owns that telemetry design layer only, and to
-leave service levels and alerting with the DevOps reviewer and debuggability with the on-call reviewer. A broader agent
-that takes over all of observability was considered and rejected, because it would rewrite a working agent and repeat
-the over-scoping Han's last specialist research had to walk back. Your request to build the agent is the evidence that
-it is needed now. Whether it finds problems the existing two would miss is untested, so the first few reviews should
-check that.
-
-The practice areas are well-corroborated; the case for a separate agent rests on a gap in Han's own agents, which is
+The practice areas are well-corroborated. The case for a separate agent rests on a gap in Han's own agents, which is
 narrower than the field as a whole.
 
 - **Confidence:** Medium
@@ -46,7 +46,7 @@ did not, without shipping new code (A2).
 The two framings agree on the goal and disagree on what it takes. Majors argues that real observability needs one
 detailed, structured record per request (a "wide event") with many high-variety fields, combined at query time (A2,
 A3). The OpenTelemetry definition does not demand that design (A1). The sharper position comes from a vendor that sells
-it, and a practitioner talk on Grafana's site calls it "more of a North Star than a silver bullet" (A24)
+wide events, and a practitioner talk on Grafana's site calls them "more of a North Star than a silver bullet" (A24)
 [single-source]. The research does not settle which framing is canonical, so an agent should know both.
 
 ### The work splits into eight practice areas
@@ -159,8 +159,9 @@ trade-off rather than rule on it.
 
 ### Han covers service levels and debuggability, but not telemetry design
 
-Observability today is split between two agents by altitude, and between them they cover most of the eight practice
-areas.
+Observability today is split between two agents by altitude, meaning the level at which each reviews: the on-call
+reviewer at the source line of application code, the DevOps reviewer at configuration and infrastructure. Between them
+they cover most of the eight practice areas.
 
 - **The DevOps reviewer covers service levels, alerting, and dashboards.** Its observability sweep is a ten-bullet
   checklist: the golden signals, SLIs and SLOs with multi-window burn-rate alerts, traces with correlation IDs,
