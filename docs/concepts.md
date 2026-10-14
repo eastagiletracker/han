@@ -91,9 +91,8 @@ A few concrete pairings from the han plugin:
 - **`/code-review` always dispatches `junior-developer` and `adversarial-security-analyst`, plus the rest of the roster
   conditionally** (`test-engineer`, `edge-case-explorer`, `structural-analyst`, `behavioral-analyst`,
   `concurrency-analyst`, `data-engineer`, `devops-engineer`, `on-call-engineer`, `observability-engineer`) based on what
-  the changed files touch.
-  The roster scales with the [size](./sizing.md): a small change runs the minimum roster; a large change runs the full
-  conditional roster. Each agent reviews the branch changes from its own lens, and the skill classifies their findings
+  the changed files touch. That is the default run. Naming a review type, such as `testing` or `work-ticket`, runs only
+  the specialists that type names. Each agent reviews the branch changes from its own lens, and the skill classifies their findings
   into the review output.
 - **`/architectural-analysis` always dispatches a spine of `structural-analyst`, `behavioral-analyst`, `risk-analyst`,
   and `software-architect`, plus the rest of the roster by signal** (`concurrency-analyst` when concurrency primitives
@@ -133,10 +132,10 @@ escalate.
   signals require it.
 - **Auto-classified, with a `$size` override.** Skills read signals (file count, subsystems touched, security/data/infra
   surface) and announce the chosen size with a one-line justification. Pass `small`, `medium`, or `large` as the first
-  positional argument to override (`/code-review medium`, `/plan-a-feature large "describe the feature"`).
+  positional argument to override (`/research medium`, `/plan-a-feature large "describe the feature"`).
 - **Sizing-aware skills.** [`/architectural-analysis`](../han-coding/docs/skills/architectural-analysis.md),
   [`/automated-test-planning`](../han-coding/docs/skills/automated-test-planning.md),
-  [`/code-overview`](../han-coding/docs/skills/code-overview.md), [`/code-review`](../han-coding/docs/skills/code-review.md),
+  [`/code-overview`](../han-coding/docs/skills/code-overview.md),
   [`/code-walkthrough`](../han-coding/docs/skills/code-walkthrough.md),
   [`/ddd-analysis`](../han-ddd/docs/skills/ddd-analysis.md),
   [`/design-an-api`](../han-coding/docs/skills/design-an-api.md),
