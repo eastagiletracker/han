@@ -1,6 +1,8 @@
 # Code Review: {PR title, branch name, or directory name}
 
 **Review type:** {token}: {Purpose from the type file} <!-- or, on the default run: **Review type:** default -->
+<!-- On a typed run whose roster does not include han-core:adversarial-security-analyst, end the line above with:
+" Security analysis did not run on this review." -->
 
 <!--
 LAZY SECTIONS: render a section ONLY when it has content. Do not emit a heading
@@ -56,8 +58,8 @@ Remediation note carries it. -->
 
 <!-- Select ONE of the following based on the highest severity present across ALL findings, INCLUDING security findings (whose severity is read from their security block even though they are not listed in the Critical section): -->
 <!-- CRIT items (or a Critical-severity security finding) exist: "This code should not be merged until the critical issues are resolved." -->
-<!-- WARN items exist (no CRIT, no Critical/High security): "This code can be merged, but the identified warnings should be reviewed first." -->
-<!-- SUGG items exist (no CRIT/WARN): "This code can be merged, but the suggestions should be reviewed first." -->
+<!-- WARN items or a High- or Medium-severity security finding exist (no CRIT, no Critical security): "This code can be merged, but the identified warnings should be reviewed first." -->
+<!-- SUGG items exist (no CRIT, no WARN, no security finding): "This code can be merged, but the suggestions should be reviewed first." -->
 <!-- No items: "This code can be approved." -->
 
 {Selected recommendation text}

@@ -52,7 +52,8 @@ Then verify:
 8. Every SEC-### finding has an `EXPLOIT:` field populated
 9. Security findings are NOT cross-referenced in `### 🔴 Critical`. Instead, when any SEC-### finding exists, the Review
    Recommendation reflects the highest severity across all findings including the security findings' own severities (a
-   Critical-severity security finding yields a do-not-merge recommendation)
+   Critical-severity security finding yields a do-not-merge recommendation, and a High- or Medium-severity one yields the
+   warnings recommendation)
 10. Junior-developer findings that overlap with a specialist agent's finding reference the specialist finding instead of
     duplicating it
 11. The report file is the COMPLETE deliverable. It carries no trailing commentary or sign-off, and no part of it is
@@ -83,7 +84,9 @@ Then verify:
     the template fixes, opens with its cause line, and carries one row per item on the absent-coverage list: every agent
     Step 3.2 selected, plus the independent validation pass. When every planned coverage ran, the block is absent.
 23. The `**Review type:**` header line is present under the title and names this run's type and its purpose, or
-    `default`. A typed run's report names no other review type anywhere.
+    `default`. A typed run's report names no other review type anywhere. On a typed run whose roster does not include
+    `han-core:adversarial-security-analyst`, the line ends with `Security analysis did not run on this review.`; that
+    sentence names missing coverage, not a review type.
 24. When the run's type file has a `## Report section` other than `none`, that section is present between the
     `<!-- type-section:start -->` and `<!-- type-section:end -->` markers, immediately after the Review Recommendation,
     and filled by the type file's rules. On a `work-ticket` run, the verdict follows those rules and every row's

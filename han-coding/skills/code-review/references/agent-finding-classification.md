@@ -53,7 +53,8 @@ For each security finding (SEC-001, SEC-002, ...) from the agent:
   `SEC-001 (Critical)`) since the SEC-### ID does not encode a tier. Do **not** also add a CRIT-### cross-reference
   entry under `### 🔴 Critical` — security findings are not duplicated into the Critical section.
 - The Review Recommendation reflects the highest severity across all findings including these security severities: a
-  Critical-severity security finding yields a do-not-merge recommendation even though it is not listed under Critical.
+  Critical-severity security finding yields a do-not-merge recommendation even though it is not listed under Critical,
+  and a High- or Medium-severity one counts as a Warning for the recommendation.
 - If the security agent found no proven vulnerabilities, the `## 🔐 Security Vulnerabilities` section and the
   Remediation note are omitted entirely.
 

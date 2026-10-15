@@ -104,7 +104,8 @@ deeper look at one concern.
 | `ux`              | Usability and accessibility of the interface               | No, name it to run it  |
 | `work-ticket`     | Whether the change resolves a named work ticket            | No, name it to run it  |
 
-> **A typed review skips security.** `/code-review testing` runs no security check, and its report does not say so.
+> **A typed review skips security.** `/code-review testing` runs no security check. Its report says so on the review type line, with
+> `Security analysis did not run on this review.`
 > Run `security` on its own, or run the default review, when you want the security analyst.
 
 Picking a type narrows which specialists run and which parts of the checklist the review applies by hand. To see which

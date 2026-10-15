@@ -129,6 +129,11 @@ section.
 **A typed run's output never names or recommends another review type.** Only the default run's announcement lists the
 available types.
 
+**A typed run without the security analyst says so.** When a typed run's roster, after `.han/config.md` attachments,
+does not include `han-core:adversarial-security-analyst`, its `**Review type:**` line ends with the sentence
+`Security analysis did not run on this review.` BECAUSE a reader of a focused report would otherwise assume the change
+was checked for exploitable paths. The sentence names coverage that is missing, not another review type to run.
+
 ### The type-file contract
 
 Every type file has a `# Review type: {token}` title and these six `##` sections, in this order. A section with nothing
@@ -144,7 +149,8 @@ to say holds the literal word `none`, except `## Severity`, which holds `default
 | `## Report section`       | `none`, or one fenced section layout followed by the rules for filling it                                | Step 8         |
 
 A `## Severity` text replaces both lines of the slot, so it must say which severities are reported and which way an
-uncertain finding goes. The YAGNI pass in Step 4 always runs, whatever `## Checklist categories` says.
+uncertain finding goes. The YAGNI pass in Step 4 runs on every type, whatever `## Checklist categories` says; Step 4
+skips it in Mode B and Mode C unless the user asks for it.
 
 ### Review types and agents from `.han/config.md`
 
@@ -299,7 +305,7 @@ contract in `## Review Types`:
 - **A checklist category** that [review-checklist.md](./references/review-checklist.md) does not bold is skipped with
   the one-line note `Review type {token}: checklist category "{name}" does not exist and was skipped.`
 
-The default run reads the five default-set type files for their rosters and checklist categories only.
+The default run reads the eight default-set type files for their rosters and checklist categories only.
 
 **Announce the review type**, as the last thing Step 1 does and before Step 2 runs anything:
 
@@ -451,7 +457,7 @@ this run, so the rerun never reads the earlier run's files.
 ### Step 3.1: Confirm the review type
 
 Carry forward the review type Step 1 resolved and announced: its token (`default` for the default run) and its type
-file, or the five default-set type files for the default run. Count the files on the Step 1 file list as `{N}`, and
+file, or the eight default-set type files for the default run. Count the files on the Step 1 file list as `{N}`, and
 draft a one-line summary of what the change does. All three are reused in the Step 3.3 calibration directive.
 
 ### Steps 3.2 to 3.5: Select, scope, and dispatch agents
